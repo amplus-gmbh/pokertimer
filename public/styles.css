@@ -114,7 +114,9 @@ h2 { font-size: 27px; line-height: 1; }
 .payout-input input { width: 100%; min-width: 0; height: 38px; padding: 0 9px; border: 1px solid #dbe1db; border-radius: 3px; outline: none; color: var(--ink); background: #fff; font-size: 16px; font-weight: 600; }
 .payout-input input:focus { border-color: var(--green); box-shadow: 0 0 0 2px #248b6217; }
 .payout-amount { color: var(--ink); font-family: "Barlow Condensed", sans-serif; font-size: 24px; font-weight: 700; line-height: 1; white-space: nowrap; }
-.settings-footer { display: flex; justify-content: flex-end; margin-top: 6px; }
+.settings-footer { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-top: 8px; }
+.alarm-sound { display: flex; align-items: center; gap: 6px; color: #8a948d; font-size: 10px; }
+.alarm-sound select { height: 26px; padding: 0 6px; border: 1px solid #dbe1db; border-radius: 3px; color: #4d5a52; background: #fff; font: inherit; font-size: 10px; cursor: pointer; }
 .settings-footer .text-button { font-size: 10px; opacity: .7; }
 .settings-footer .text-button:hover { opacity: 1; }
 .structure-column { min-width: 0; padding-left: 30px; border-left: 1px solid #dce2dc; }
@@ -214,4 +216,48 @@ h2 { font-size: 27px; line-height: 1; }
   .payout-grid { gap: 6px; }
   .payout-place { padding: 9px 8px 10px; }
   .payout-amount { font-size: 20px; }
+}
+
+/* Laptop/Desktop: Platz für Lesbarkeit aus Distanz nutzen. */
+@media (min-width: 981px) {
+  .topbar { height: 52px; padding: 0 2.5vw; }
+  .app-shell { max-width: 1920px; padding: 18px 2.5vw 40px; grid-template-columns: minmax(0, 1fr) clamp(330px, 27vw, 430px); gap: 28px; }
+  .timer-headline { min-height: 46px; }
+  .timer-headline h1 { font-size: 26px; }
+  .timer-panel { display: flex; flex-direction: column; min-height: clamp(380px, calc(100vh - 300px), 1000px); padding: 24px 32px 26px; }
+  .timer-panel::before { border-radius: 180px / 100px; }
+  .timer-meta { font-size: clamp(12px, 1.1vw, 18px); }
+  .level-tag { padding: .45em .8em; }
+  .blinds-line { margin-top: auto; gap: .3em; font-size: clamp(50px, min(6.4vw, 10vh), 150px); }
+  .ante-display { padding: .55em .8em; font-size: clamp(10px, 1.15vw, 18px); }
+  .timer-clock { margin: .04em 0 .1em; font-size: clamp(96px, min(14vw, 24vh), 340px); }
+  .timer-track { max-width: 55%; height: 5px; }
+  .timer-actions { margin-top: auto; padding-top: 18px; }
+  .timer-actions .button { min-height: 42px; font-size: 13px; }
+  #reset-button { width: 44px; }
+  .level-navigation { min-height: 56px; font-size: clamp(11px, 1.25vw, 19px); }
+  .level-nav-button { width: 34px; height: 34px; }
+  .stat-block { min-height: 96px; }
+  .stat-label { font-size: 12px; }
+  .stat-block strong { font-size: clamp(21px, 2.4vw, 40px); }
+  .stat-block strong small { font-size: .45em; }
+  .levels-list { max-height: calc(100vh - 230px); }
+}
+
+/* Anzeigemodus (Vollbild-Button): nur Uhr und Kennzahlen, maximal gross. */
+.is-display .structure-column, .is-display .field-notes, .is-display .timer-headline { display: none; }
+.is-display .app-shell { max-width: none; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 741px) {
+  .is-display .timer-panel { display: flex; flex-direction: column; min-height: calc(100vh - 256px); }
+  .is-display .blinds-line { margin-top: auto; font-size: clamp(50px, min(9vw, 12vh), 220px); }
+  .is-display .ante-display { font-size: clamp(10px, 1.5vw, 26px); }
+  .is-display .timer-clock { font-size: clamp(96px, min(21vw, 27vh), 520px); }
+  .is-display .stat-block { min-height: 80px; }
+  .is-display .timer-meta { font-size: clamp(12px, 1.4vw, 24px); }
+  .is-display .timer-actions { margin-top: auto; }
+  .is-display .level-navigation { font-size: clamp(11px, 1.6vw, 26px); }
+  .is-display .stat-block strong { font-size: clamp(21px, 3.2vw, 56px); }
+}
+@media (max-width: 740px) {
+  .is-display .app-shell { gap: 0; }
 }

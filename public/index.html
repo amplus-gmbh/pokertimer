@@ -20,7 +20,7 @@
       </a>
       <div class="topbar-right">
         <span class="session-state"><span class="status-dot" id="save-dot"></span><span id="save-status">Verbinde …</span></span>
-        <button class="icon-button" id="fullscreen-button" type="button" title="Vollbild" aria-label="Vollbild aktivieren"><span class="fullscreen-icon">⛶</span></button>
+        <button class="icon-button" id="fullscreen-button" type="button" title="Anzeigemodus (Vollbild)" aria-label="Anzeigemodus (Vollbild)" aria-pressed="false"><span class="fullscreen-icon">⛶</span></button>
       </div>
     </header>
 
@@ -81,7 +81,10 @@
               <div class="payout-place"><label for="payout-second">2. Platz</label><span class="payout-input"><input id="payout-second" type="number" min="0" max="100" value="30"><span>%</span></span><strong class="payout-amount" id="payout-amount-1">CHF 0</strong></div>
               <div class="payout-place"><label for="payout-third">3. Platz</label><span class="payout-input"><input id="payout-third" type="number" min="0" max="100" value="20"><span>%</span></span><strong class="payout-amount" id="payout-amount-2">CHF 0</strong></div>
             </div>
-            <div class="settings-footer"><button class="text-button" id="test-alarm-button" type="button" title="Spielt den Alarmton kurz ab">🔔 Alarm testen</button></div>
+            <div class="settings-footer">
+              <label class="alarm-sound"><span>Alarmton</span><select id="alarm-sound"><option value="soft">Dezent</option><option value="medium">Mittel</option><option value="loud">Aggressiv</option></select></label>
+              <button class="text-button" id="test-alarm-button" type="button" title="Spielt den gewählten Alarmton kurz ab">🔔 Alarm testen</button>
+            </div>
           </div>
         </section>
       </section>

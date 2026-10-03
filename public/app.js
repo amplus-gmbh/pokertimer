@@ -26,9 +26,22 @@ const state = {
   eliminated: 0,
   rebuys: 0,
   payouts: [50, 30, 20],
+  alarmSound: 'soft',
   prompt: { durationHours: 4, breakEvery: 60, breakLength: 10, chips: '25, 100, 500, 1000, 5000', wishes: '' }
 };
 const DEFAULT_PROMPT = { ...state.prompt };
+// Ein Durchgang pro Intervall; wiederholt sich, bis der Alarm quittiert wird.
+const ALARM_SOUNDS = {
+  soft: { wave: 'sine', volume: 0.12, length: 0.2, interval: 1400, notes: [{ at: 0, frequency: 880 }, { at: 0.22, frequency: 740 }] },
+  medium: {
+    wave: 'triangle', volume: 0.3, length: 0.16, interval: 1200,
+    notes: [{ at: 0, frequency: 988 }, { at: 0.19, frequency: 784 }, { at: 0.38, frequency: 988 }, { at: 0.57, frequency: 1175 }]
+  },
+  loud: {
+    wave: 'square', volume: 0.22, length: 0.1, interval: 900,
+    notes: [0, 0.12, 0.24, 0.36, 0.48, 0.6].map((at, index) => ({ at, frequency: index % 2 ? 950 : 1400 }))
+  }
+};
 const PROMPT_FIELDS = {
   'prompt-duration': 'durationHours',
   'prompt-break-every': 'breakEvery',
@@ -101,12 +114,19 @@ function bindEvents() {
   $('copy-prompt-button').addEventListener('click', copyPrompt);
   $('prompt-preview').addEventListener('focus', () => $('prompt-preview').select());
   $('test-alarm-button').addEventListener('click', testAlarm);
+  $('alarm-sound').addEventListener('change', (event) => {
+    state.alarmSound = ALARM_SOUNDS[event.target.value] ? event.target.value : 'soft';
+    saveState();
+    if (state.status !== 'alarm') { ensureAudio(); playAlarmTone(); }
+  });
   for (const id of Object.keys(PROMPT_FIELDS)) {
     $(id).addEventListener('input', updatePromptFromInputs);
     $(id).addEventListener('change', () => { syncPromptInputs(); saveState(); });
   }
   $('apply-answer-button').addEventListener('click', applyAnswer);
   $('fullscreen-button').addEventListener('click', toggleFullscreen);
+  // Esc beendet das Vollbild; Anzeigemodus dann ebenfalls verlassen.
+  document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) setDisplayMode(false); });
   $('edit-title-button').addEventListener('click', editTitle);
   $('levels-list').addEventListener('click', handleLevelClick);
   $('levels-list').addEventListener('change', handleLevelEdit);
@@ -132,6 +152,7 @@ function restoreState(saved) {
   state.rebuys = Math.max(0, Math.floor(Number(state.rebuys) || 0));
   state.payouts = Array.isArray(state.payouts) && state.payouts.length === 3 ? state.payouts : [50, 30, 20];
   state.prompt = sanitizePrompt(saved.prompt);
+  if (!ALARM_SOUNDS[state.alarmSound]) state.alarmSound = 'soft';
   if (!['running', 'paused', 'alarm', 'finished'].includes(state.status)) state.status = 'paused';
   if (state.status === 'running') {
     state.endsAt = Number(saved.endsAt) || (Number(saved.savedAt) || Date.now()) + state.secondsLeft * 1000;
@@ -240,23 +261,30 @@ function startAlarm() {
   ensureAudio();
   if (!audioContext || alarmHandle) return;
   playAlarmTone();
-  alarmHandle = window.setInterval(playAlarmTone, 1400);
+  alarmHandle = window.setInterval(playAlarmTone, alarmSound().interval);
+}
+
+function alarmSound() {
+  return ALARM_SOUNDS[state.alarmSound] || ALARM_SOUNDS.soft;
 }
 
 function playAlarmTone() {
   if (!audioContext) return;
+  const sound = alarmSound();
   const now = audioContext.currentTime;
-  for (const offset of [0, 0.22]) {
+  for (const note of sound.notes) {
+    const start = now + note.at;
     const oscillator = audioContext.createOscillator();
     const gain = audioContext.createGain();
-    oscillator.type = 'sine';
-    oscillator.frequency.value = offset ? 740 : 880;
-    gain.gain.setValueAtTime(0.0001, now + offset);
-    gain.gain.exponentialRampToValueAtTime(0.12, now + offset + 0.025);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.2);
+    oscillator.type = sound.wave;
+    oscillator.frequency.value = note.frequency;
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(sound.volume, start + 0.015);
+    gain.gain.setValueAtTime(sound.volume, start + sound.length * 0.6);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + sound.length);
     oscillator.connect(gain).connect(audioContext.destination);
-    oscillator.start(now + offset);
-    oscillator.stop(now + offset + 0.21);
+    oscillator.start(start);
+    oscillator.stop(start + sound.length + 0.01);
     currentAudioOscillators.push(oscillator);
     oscillator.addEventListener('ended', () => { currentAudioOscillators = currentAudioOscillators.filter((item) => item !== oscillator); });
   }
@@ -293,6 +321,7 @@ function render() {
   $('payout-third').value = state.payouts[2];
   updatePayouts();
   syncPromptInputs();
+  $('alarm-sound').value = state.alarmSound;
 }
 
 function renderTimer() {
@@ -529,9 +558,10 @@ function testAlarm() {
   if (state.status === 'alarm') return;
   ensureAudio();
   if (!audioContext) return showToast('Dieser Browser unterstützt keine Tonausgabe.');
+  const { interval } = alarmSound();
   playAlarmTone();
-  window.setTimeout(playAlarmTone, 1400);
-  window.setTimeout(playAlarmTone, 2800);
+  window.setTimeout(playAlarmTone, interval);
+  window.setTimeout(playAlarmTone, interval * 2);
   showToast('Alarmton wird abgespielt. Lautstärke prüfen.');
 }
 
@@ -714,11 +744,22 @@ function toggleSettings() {
   $('settings-toggle').innerHTML = `${open ? 'Einklappen' : 'Ausklappen'} <span>${open ? '⌃' : '⌄'}</span>`;
 }
 
+// Vollbild schaltet den Anzeigemodus (nur Uhr und Kennzahlen) mit ein.
+// Ohne Vollbild-API (z. B. iPhone) wird nur der Anzeigemodus umgeschaltet.
 async function toggleFullscreen() {
+  const entering = !document.body.classList.contains('is-display');
+  setDisplayMode(entering);
   try {
-    if (!document.fullscreenElement) await document.documentElement.requestFullscreen();
-    else await document.exitFullscreen();
-  } catch { showToast('Vollbild wird von diesem Browser nicht unterstützt.'); }
+    if (entering && !document.fullscreenElement) await document.documentElement.requestFullscreen?.();
+    if (!entering && document.fullscreenElement) await document.exitFullscreen();
+  } catch { /* Anzeigemodus funktioniert auch ohne Vollbild. */ }
+}
+
+function setDisplayMode(active) {
+  document.body.classList.toggle('is-display', active);
+  $('fullscreen-button').setAttribute('aria-pressed', String(active));
+  $('fullscreen-button').title = active ? 'Anzeigemodus beenden' : 'Anzeigemodus (Vollbild)';
+  window.scrollTo(0, 0);
 }
 
 function editTitle() {
