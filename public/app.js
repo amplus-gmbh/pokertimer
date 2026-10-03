@@ -44,9 +44,18 @@ const tournamentUrl = `/api/tournaments/${tournamentId}`;
 async function initialize() {
   bindEvents();
   try {
-    const [healthResponse, stateResponse] = await Promise.all([fetch('/api/health'), fetch(tournamentUrl)]);
-    if (!healthResponse.ok || !stateResponse.ok) throw new Error('Server nicht erreichbar');
+    const healthResponse = await fetch('/api/health');
+    if (!healthResponse.ok) throw new Error('Server nicht erreichbar');
     const health = await healthResponse.json();
+    if (health.storage === 'mysql' && !health.dbReady) {
+      setSavedStatus(false, `Datenbank-Fehler (${health.dbError || 'unbekannt'})`);
+      showToast('Datenbank nicht erreichbar. Timer läuft lokal, Änderungen werden nicht gespeichert.');
+      syncControls();
+      render();
+      return;
+    }
+    const stateResponse = await fetch(tournamentUrl);
+    if (!stateResponse.ok) throw new Error('Server nicht erreichbar');
     const saved = await stateResponse.json();
     serverStorage = health.storage;
     if (saved.state) restoreState(saved.state);
