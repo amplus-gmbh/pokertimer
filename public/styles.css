@@ -129,8 +129,11 @@ h2 { font-size: 27px; line-height: 1; }
 .ai-box textarea:focus { border-color: var(--blue); }
 .ai-button { width: 100%; height: 31px; display: flex; align-items: center; justify-content: center; gap: 7px; margin-top: 7px; border: 0; border-radius: 3px; color: #fff; background: var(--blue); font-size: 10px; font-weight: 700; cursor: pointer; }
 .ai-button:hover { background: #2f67a6; }
-.ai-button:disabled { opacity: .6; cursor: wait; }
+.ai-button:disabled { opacity: .6; cursor: default; }
 .ai-note { margin: 7px 0 0; color: #919a93; font-size: 9px; line-height: 1.4; }
+.ai-step { display: block; margin: 9px 0 5px; color: #506056; font-size: 9px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; }
+.ai-header + .ai-step { margin-top: 0; }
+#ai-answer { font-family: Consolas, monospace; }
 .levels-list { max-height: 455px; overflow: auto; border-top: 1px solid #dfe4df; scrollbar-color: #c7d0c8 transparent; scrollbar-width: thin; }
 .level-row { min-height: 51px; display: grid; grid-template-columns: 39px minmax(86px, 1fr) 61px 26px; align-items: center; gap: 8px; padding: 5px 8px 5px 0; border-bottom: 1px solid #e0e5e0; cursor: pointer; transition: background .12s; }
 .level-row:hover { background: #e9ede8; }

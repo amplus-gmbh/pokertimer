@@ -94,10 +94,14 @@
           <input id="json-file-input" type="file" accept="application/json,.json" hidden>
         </div>
         <div class="ai-box">
-          <div class="ai-header"><span class="ai-spark">✳</span><div><strong>Struktur mit KI</strong><span>Beschreibung eingeben und Levels generieren</span></div></div>
-          <textarea id="ai-prompt" rows="2" placeholder="z. B. 8 Spieler, 20-Minuten-Level, Start 25/50, nach 2 Stunden 10-Minuten-Pausen"></textarea>
-          <button class="ai-button" id="generate-button" type="button"><span>✳</span> Blindstruktur erstellen</button>
-          <p class="ai-note" id="ai-note">KI benötigt OPENAI_API_KEY in der Server-Konfiguration.</p>
+          <div class="ai-header"><span class="ai-spark">✳</span><div><strong>Struktur mit KI-Chat</strong><span>Prompt kopieren, in ChatGPT, Claude o. Ä. einfügen, Antwort hier einfügen</span></div></div>
+          <label class="ai-step" for="ai-prompt">1. Vorgaben</label>
+          <textarea id="ai-prompt" rows="2" placeholder="z. B. ca. 4 Stunden, 20-Minuten-Level, Start 25/50, nach 2 Stunden 10 Minuten Pause"></textarea>
+          <button class="ai-button" id="copy-prompt-button" type="button"><span>⧉</span> 2. Prompt kopieren</button>
+          <label class="ai-step" for="ai-answer">3. Antwort der KI einfügen</label>
+          <textarea id="ai-answer" rows="2" spellcheck="false" placeholder="Antwort mit JSON hier einfügen"></textarea>
+          <button class="ai-button" id="apply-answer-button" type="button"><span>✓</span> Struktur übernehmen</button>
+          <p class="ai-note">Spieler und Startstack aus „Spieler &amp; Preisgeld“ werden automatisch in den Prompt übernommen.</p>
         </div>
         <div class="levels-list" id="levels-list" aria-label="Blindlevel"></div>
         <div class="structure-footer"><span id="level-count">12 LEVELS</span><span id="total-duration">GESAMT 4H 00M</span></div>

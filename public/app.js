@@ -37,19 +37,19 @@ let currentAudioOscillators = [];
 let serverStorage = 'memory';
 let editMode = false;
 const $ = (id) => document.getElementById(id);
+const TOURNAMENT_ID = /^[A-Za-z0-9_-]{16,64}$/;
+const tournamentId = resolveTournamentId();
+const tournamentUrl = `/api/tournaments/${tournamentId}`;
 
 async function initialize() {
   bindEvents();
   try {
-    const [healthResponse, stateResponse] = await Promise.all([fetch('/api/health'), fetch('/api/state')]);
+    const [healthResponse, stateResponse] = await Promise.all([fetch('/api/health'), fetch(tournamentUrl)]);
     if (!healthResponse.ok || !stateResponse.ok) throw new Error('Server nicht erreichbar');
     const health = await healthResponse.json();
     const saved = await stateResponse.json();
     serverStorage = health.storage;
     if (saved.state) restoreState(saved.state);
-    $('ai-note').textContent = health.aiConfigured
-      ? 'KI ist bereit. Die erzeugte Struktur ersetzt die aktuelle Liste.'
-      : 'KI benötigt OPENAI_API_KEY in der Server-Konfiguration.';
     setSavedStatus(true, health.storage === 'mysql' ? 'Mit MySQL verbunden' : 'Nur temporär gespeichert');
   } catch (error) {
     setSavedStatus(false, 'Server nicht erreichbar');
@@ -80,7 +80,8 @@ function bindEvents() {
   $('apply-json-button').addEventListener('click', applyJsonEditor);
   $('json-toggle').addEventListener('click', toggleJsonEditor);
   $('settings-toggle').addEventListener('click', toggleSettings);
-  $('generate-button').addEventListener('click', generateStructure);
+  $('copy-prompt-button').addEventListener('click', copyPrompt);
+  $('apply-answer-button').addEventListener('click', applyAnswer);
   $('fullscreen-button').addEventListener('click', toggleFullscreen);
   $('edit-title-button').addEventListener('click', editTitle);
   $('levels-list').addEventListener('click', handleLevelClick);
@@ -494,7 +495,7 @@ function exportStructure() {
 
 function applyJsonEditor() {
   try {
-    applyStructure(JSON.parse($('json-editor').value));
+    applyStructure(extractJson($('json-editor').value));
     showToast('Blindstruktur übernommen.');
   } catch (error) {
     showToast(error.message || 'JSON ist ungültig.');
@@ -532,28 +533,99 @@ function isValidStructure(data) {
       && (level.type === 'break' || (Number(level.smallBlind) > 0 && Number(level.bigBlind) >= Number(level.smallBlind))));
 }
 
-async function generateStructure() {
-  const prompt = $('ai-prompt').value.trim();
-  if (!prompt) return showToast('Beschreibe zuerst dein Turnier.');
-  const button = $('generate-button');
-  button.disabled = true;
-  button.textContent = 'Struktur wird erstellt …';
-  try {
-    const response = await fetch('/api/generate-structure', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt })
-    });
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.error || 'KI-Anfrage fehlgeschlagen.');
-    applyStructure(result.structure);
-    showToast(`${state.levels.length} Einträge mit KI erstellt.`);
-  } catch (error) {
-    showToast(error.message || 'KI-Anfrage fehlgeschlagen.');
-  } finally {
-    button.disabled = false;
-    button.innerHTML = '<span>✳</span> Blindstruktur erstellen';
+function buildPrompt() {
+  const wishes = $('ai-prompt').value.trim()
+    || 'Keine besonderen Vorgaben. Erstelle eine ausgewogene Struktur für ein Home Game von etwa 4 Stunden.';
+  return `Erstelle eine Blindstruktur für ein No-Limit-Hold'em-Pokerturnier.
+
+Turnierdaten:
+- Spieler: ${state.initialPlayers}
+- Startstack: ${state.startingStack} Chips pro Spieler
+
+Vorgaben:
+${wishes}
+
+Antworte ausschliesslich mit JSON in genau diesem Format, ohne weiteren Text:
+{"levels":[{"smallBlind":25,"bigBlind":50,"ante":0,"durationMinutes":20,"type":"level"},{"smallBlind":0,"bigBlind":0,"ante":0,"durationMinutes":10,"type":"break"}]}
+
+Regeln:
+- Jeder Eintrag hat genau die Felder smallBlind, bigBlind, ante, durationMinutes und type.
+- type ist "level" für ein Blindlevel oder "break" für eine Pause. Bei Pausen sind smallBlind, bigBlind und ante 0.
+- Alle Werte sind ganze Zahlen. Bei Levels gilt smallBlind > 0, bigBlind >= smallBlind und ante >= 0 (0 = ohne Ante).
+- durationMinutes liegt zwischen 1 und 240.
+- Höchstens 100 Einträge, in Spielreihenfolge.
+- Die Blinds steigen von Level zu Level und passen zu Startstack und Spielerzahl.`;
+}
+
+async function copyPrompt() {
+  if (await copyText(buildPrompt())) {
+    showToast('Prompt kopiert. Im KI-Chat einfügen und die Antwort unten einfügen.');
+    $('ai-answer').focus();
+  } else {
+    showToast('Kopieren nicht möglich. Bitte Zwischenablage im Browser erlauben.');
   }
+}
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    // Fallback für Browser ohne Clipboard-API-Berechtigung.
+    const helper = document.createElement('textarea');
+    helper.value = text;
+    helper.setAttribute('readonly', '');
+    helper.style.position = 'fixed';
+    helper.style.opacity = '0';
+    document.body.append(helper);
+    helper.select();
+    const copied = document.execCommand('copy');
+    helper.remove();
+    return copied;
+  }
+}
+
+function applyAnswer() {
+  const answer = $('ai-answer').value.trim();
+  if (!answer) return showToast('Zuerst die Antwort der KI einfügen.');
+  try {
+    applyStructure(extractJson(answer));
+    $('ai-answer').value = '';
+    showToast(`${state.levels.length} Einträge übernommen.`);
+  } catch (error) {
+    showToast(error.message || 'Antwort konnte nicht gelesen werden.');
+  }
+}
+
+// KI-Antworten enthalten oft Codeblöcke oder Begleittext rund um das JSON.
+function extractJson(text) {
+  const candidates = [text.trim()];
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fenced) candidates.push(fenced[1].trim());
+  const start = text.search(/[[{]/);
+  const end = Math.max(text.lastIndexOf('}'), text.lastIndexOf(']'));
+  if (start >= 0 && end > start) candidates.push(text.slice(start, end + 1));
+  for (const candidate of candidates) {
+    try { return JSON.parse(candidate); } catch { /* Nächsten Kandidaten versuchen. */ }
+  }
+  throw new Error('Kein gültiges JSON gefunden. Bitte die vollständige Antwort einfügen.');
+}
+
+function resolveTournamentId() {
+  const params = new URLSearchParams(window.location.search);
+  let id = params.get('t');
+  if (!TOURNAMENT_ID.test(id || '')) {
+    try { id = window.localStorage.getItem('tournamentId'); } catch { id = null; }
+  }
+  if (!TOURNAMENT_ID.test(id || '')) {
+    const bytes = crypto.getRandomValues(new Uint8Array(16));
+    id = btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  try { window.localStorage.setItem('tournamentId', id); } catch { /* Ohne Speicher bleibt die ID in der URL. */ }
+  // ID in der URL halten, damit sich das Turnier per Link auf einem zweiten Gerät öffnen lässt.
+  params.set('t', id);
+  window.history.replaceState(null, '', `${window.location.pathname}?${params}${window.location.hash}`);
+  return id;
 }
 
 function toggleJsonEditor() {
@@ -621,7 +693,7 @@ function saveState() {
   if (saveHandle) window.clearTimeout(saveHandle);
   saveHandle = window.setTimeout(async () => {
     try {
-      const response = await fetch('/api/state', {
+      const response = await fetch(tournamentUrl, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ state: snapshot })

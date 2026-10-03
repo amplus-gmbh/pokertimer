@@ -1,6 +1,6 @@
 # Table Time
 
-Pokerturnier-Blindtimer für Node.js mit MySQL-Persistenz. Die Oberfläche ist auf Deutsch; Blindstrukturen können manuell gepflegt, als JSON importiert/exportiert oder optional über eine OpenAI-kompatible API erzeugt werden.
+Pokerturnier-Blindtimer für Node.js mit MySQL-Persistenz. Die Oberfläche ist auf Deutsch; Blindstrukturen können manuell gepflegt, als JSON importiert/exportiert oder über einen beliebigen KI-Chat erstellt werden: Die App erzeugt einen Prompt zum Kopieren, die Antwort wird wieder eingefügt.
 
 ## Lokal starten
 
@@ -12,7 +12,7 @@ npm install
 npm start
 ```
 
-Ohne `DB_*`-Konfiguration startet die App im lokalen Arbeitsspeicher. Für dauerhafte Speicherung MySQL konfigurieren. Die KI-Funktion bleibt ohne `OPENAI_API_KEY` deaktiviert; JSON-Import und manuelle Bearbeitung funktionieren trotzdem.
+Ohne `DB_*`-Konfiguration startet die App im lokalen Arbeitsspeicher. Für dauerhafte Speicherung MySQL konfigurieren.
 
 ## Blindstruktur-JSON
 
@@ -27,6 +27,14 @@ Ohne `DB_*`-Konfiguration startet die App im lokalen Arbeitsspeicher. Für dauer
 ```
 
 Zulässig sind 1 bis 100 Einträge, Level von 1 bis 240 Minuten und Pausen mit denselben Zeitgrenzen. Ein Rebuy fügt einen Buy-in und Startstack hinzu. Der Average Stack ist Gesamtchips geteilt durch Spieler im Spiel. Auszahlungen ergeben sich aus den Prozentanteilen, die zusammen 100 % sein sollten.
+
+## Turniere und Zugriff
+
+Die App ist öffentlich und braucht kein Login. Jeder Browser bekommt beim ersten Aufruf ein eigenes Turnier mit zufälliger ID; sie steht in der Adresse (`?t=…`). Wer diesen Link öffnet, z. B. auf einem zweiten Gerät, steuert dasselbe Turnier. Den Link deshalb nur an Mitspielende weitergeben. Turniere, die 180 Tage nicht verändert wurden, löscht der Server automatisch.
+
+## Blindstruktur mit KI-Chat
+
+Vorgaben eintragen, „Prompt kopieren“ klicken und den Prompt in ChatGPT, Claude o. Ä. einfügen. Die Antwort komplett zurück ins Feld „Antwort der KI einfügen“ kopieren und übernehmen; Codeblöcke und Begleittext werden ignoriert. Spieler und Startstack fliessen automatisch in den Prompt ein.
 
 ## Hostinger Deployment
 
@@ -63,17 +71,12 @@ hPanel → **Websites → (geekz.ch) → Datenbanken → MySQL-Datenbanken** →
 | `DB_NAME` | Datenbankname aus Schritt 1 |
 | `DB_USER` | Datenbankbenutzer aus Schritt 1 |
 | `DB_PASSWORD` | Datenbankpasswort aus Schritt 1 |
-| `APP_USER` | Benutzername für den Timer |
-| `APP_PASSWORD` | Langes, einzigartiges Passwort für den Timer |
-| `OPENAI_API_KEY` | Optional; nur für die KI-Generierung |
-| `OPENAI_MODEL` | Optional, Standard `gpt-4o-mini` |
-| `OPENAI_BASE_URL` | Optional, Standard `https://api.openai.com/v1` |
 
 6. **Deploy** klicken. Danach SSL für `pokertimer.geekz.ch` aktivieren, falls hPanel das nicht automatisch tut.
 
 ### 3. Prüfen
 
-`https://pokertimer.geekz.ch` öffnen: Der Browser fragt nach `APP_USER`/`APP_PASSWORD`. Oben rechts muss **„Mit MySQL verbunden“** stehen; „Nur temporär gespeichert“ heisst, dass DB-Variablen fehlen. Im Runtime-Log von hPanel erscheint beim Start `MySQL verbunden; …`. Die Tabelle `tournament_state` wird beim ersten Start automatisch angelegt.
+`https://pokertimer.geekz.ch` öffnen. Oben rechts muss **„Mit MySQL verbunden“** stehen; „Nur temporär gespeichert“ heisst, dass DB-Variablen fehlen. Im Runtime-Log von hPanel erscheint beim Start `MySQL verbunden; …`. Die Tabelle `tournaments` wird beim ersten Start automatisch angelegt.
 
 ### Updates
 
