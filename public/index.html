@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#102a22">
+    <meta name="description" content="Pokerturnier-Blindtimer mit Struktur, Alarm, Chip- und Preispool-Übersicht.">
+    <title>Table Time | Poker Blind Timer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles.css">
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Table Time Startseite">
+        <span class="brand-mark"><span>♠</span><span>♥</span><span>♦</span><span>♣</span></span>
+        <span class="brand-name">TABLE<span>TIME</span></span>
+      </a>
+      <div class="topbar-right">
+        <span class="session-state"><span class="status-dot" id="save-dot"></span><span id="save-status">Verbinde …</span></span>
+        <button class="icon-button" id="fullscreen-button" type="button" title="Vollbild" aria-label="Vollbild aktivieren"><span class="fullscreen-icon">⛶</span></button>
+      </div>
+    </header>
+
+    <main class="app-shell">
+      <section class="timer-column" aria-label="Blindtimer">
+        <div class="timer-headline">
+          <div><p class="eyebrow">TURNIERUHR</p><h1 id="tournament-title-display">Home Game</h1></div>
+          <button class="text-button" id="edit-title-button" type="button" title="Turniernamen ändern">Bearbeiten</button>
+        </div>
+
+        <section class="timer-panel" id="timer-panel" aria-live="polite">
+          <div class="table-light"></div>
+          <div class="timer-meta"><span class="level-tag" id="level-label">LEVEL 01</span><span id="timer-mode">BEREIT</span></div>
+          <div class="blinds-line">
+            <span id="small-blind-display">100</span><i id="blind-separator">/</i><span id="big-blind-display">200</span>
+            <span class="ante-display" id="ante-display">ANTE 25</span>
+          </div>
+          <div class="timer-clock" id="timer-clock">20:00</div>
+          <div class="timer-track"><span id="timer-progress"></span></div>
+          <div class="timer-actions">
+            <button class="button button-primary" id="start-button" type="button"><span>▶</span> Start</button>
+            <button class="button button-quiet" id="pause-button" type="button" disabled><span>Ⅱ</span> Pause</button>
+            <button class="button button-quiet" id="reset-button" type="button" title="Aktuelles Level zurücksetzen" aria-label="Aktuelles Level zurücksetzen">↺</button>
+          </div>
+          <div class="alarm-overlay" id="alarm-overlay" hidden>
+            <div class="alarm-copy"><span class="alarm-icon">!</span><div><strong>Level beendet</strong><span>Alarm quittieren und nächstes Level starten</span></div></div>
+            <button class="button button-alarm" id="acknowledge-button" type="button">Alarm aus · Weiter</button>
+          </div>
+        </section>
+
+        <div class="level-navigation">
+          <button class="level-nav-button" id="previous-level-button" type="button" aria-label="Vorheriges Level">←</button>
+          <span id="next-level-caption">NÄCHSTES LEVEL · 200 / 400</span>
+          <button class="level-nav-button" id="next-level-button" type="button" aria-label="Nächstes Level">→</button>
+        </div>
+
+        <section class="stats-grid" aria-label="Turnierübersicht">
+          <article class="stat-block"><span class="stat-icon stat-red">♟</span><div><span class="stat-label">IM SPIEL</span><strong id="players-in-game">8 <small>/ 8</small></strong></div></article>
+          <article class="stat-block"><span class="stat-icon stat-blue">◉</span><div><span class="stat-label">AVERAGE STACK</span><strong id="average-stack">10.000</strong></div></article>
+          <article class="stat-block"><span class="stat-icon stat-green">◆</span><div><span class="stat-label">PREISPOOL</span><strong id="prize-pool">CHF 160</strong></div></article>
+        </section>
+
+        <section class="field-notes">
+          <div class="field-notes-heading"><span>SPIELER & PREISGELD</span><button class="collapse-button" id="settings-toggle" type="button" aria-expanded="true">Einklappen <span>⌃</span></button></div>
+          <div class="settings-content" id="settings-content">
+            <div class="settings-grid">
+              <label class="field"><span>Spieler gestartet</span><input id="initial-players" type="number" min="2" max="1000" value="8"></label>
+              <label class="field"><span>Startstack</span><input id="starting-stack" type="number" min="1" step="100" value="10000"></label>
+              <label class="field"><span>Buy-in (CHF)</span><input id="buy-in" type="number" min="0" step="1" value="20"></label>
+            </div>
+            <div class="player-actions">
+              <div class="player-count"><span>Ausgeschieden</span><strong id="eliminated-count">0</strong></div>
+              <div class="action-pair"><button class="small-action" id="eliminate-button" type="button">− Bust</button><button class="small-action" id="rebuy-button" type="button">+ Rebuy</button></div>
+            </div>
+            <div class="payout-row"><span>Auszahlung</span><div class="payout-inputs"><label><input id="payout-first" type="number" min="0" max="100" value="50"><span>1.</span></label><label><input id="payout-second" type="number" min="0" max="100" value="30"><span>2.</span></label><label><input id="payout-third" type="number" min="0" max="100" value="20"><span>3.</span></label></div><span class="payout-total" id="payout-total">100%</span></div>
+            <div class="payout-results" id="payout-results"></div>
+          </div>
+        </section>
+      </section>
+
+      <aside class="structure-column" aria-label="Blindstruktur">
+        <div class="structure-heading">
+          <div><p class="eyebrow">DEIN TURNIER</p><h2>Blindstruktur</h2></div>
+          <button class="icon-button add-level-button" id="add-level-button" type="button" title="Level hinzufügen" aria-label="Level hinzufügen">＋</button>
+        </div>
+        <div class="structure-tools">
+          <button class="tool-button" id="import-button" type="button"><span>↥</span> JSON importieren</button>
+          <button class="tool-button" id="export-button" type="button"><span>↧</span> Export</button>
+          <button class="tool-button" id="edit-levels-button" type="button" aria-pressed="false"><span>✎</span> Bearbeiten</button>
+          <button class="tool-button" id="add-break-button" type="button"><span>Ⅱ</span> Pause</button>
+          <input id="json-file-input" type="file" accept="application/json,.json" hidden>
+        </div>
+        <div class="ai-box">
+          <div class="ai-header"><span class="ai-spark">✳</span><div><strong>Struktur mit KI</strong><span>Beschreibung eingeben und Levels generieren</span></div></div>
+          <textarea id="ai-prompt" rows="2" placeholder="z. B. 8 Spieler, 20-Minuten-Level, Start 25/50, nach 2 Stunden 10-Minuten-Pausen"></textarea>
+          <button class="ai-button" id="generate-button" type="button"><span>✳</span> Blindstruktur erstellen</button>
+          <p class="ai-note" id="ai-note">KI benötigt OPENAI_API_KEY in der Server-Konfiguration.</p>
+        </div>
+        <div class="levels-list" id="levels-list" aria-label="Blindlevel"></div>
+        <div class="structure-footer"><span id="level-count">12 LEVELS</span><span id="total-duration">GESAMT 4H 00M</span></div>
+        <div class="manual-json">
+          <button class="json-toggle" id="json-toggle" type="button" aria-expanded="false">JSON manuell bearbeiten <span>⌄</span></button>
+          <div id="json-editor-wrap" hidden><textarea id="json-editor" spellcheck="false" aria-label="Blindstruktur JSON"></textarea><button class="tool-button apply-json-button" id="apply-json-button" type="button">JSON übernehmen</button></div>
+        </div>
+      </aside>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <div class="sr-only" id="live-announcement" aria-live="assertive"></div>
+  </body>
+</html>
