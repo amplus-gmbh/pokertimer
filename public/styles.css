@@ -128,10 +128,14 @@ h2 { font-size: 27px; line-height: 1; }
 .small-action:hover:not(:disabled) { border-color: #aab8af; }
 .small-action:disabled { opacity: .4; cursor: default; }
 #rebuy-button { color: var(--green); border-color: #bcd9ca; }
-.payout-heading { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; padding-top: 12px; border-top: 1px solid #e0e5df; color: #79847c; font-size: 11px; }
+.payout-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #e0e5df; color: #79847c; font-size: 11px; }
+.payout-places { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.payout-places input { width: 62px; height: 32px; padding: 0 8px; border: 1px solid #dbe1db; border-radius: 3px; color: var(--ink); background: #fff; font-size: 14px; font-weight: 600; }
+.payout-hint { margin: 8px 0 0; padding: 7px 10px; border-radius: 3px; color: #4d5a52; background: #fbf4e2; font-size: 11px; }
+.payout-hint .text-button { padding: 0; color: var(--green); font-weight: 700; }
 .payout-total { color: var(--green); font-size: 12px; font-weight: 700; }
 .payout-total.invalid { color: var(--red); }
-.payout-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 9px; }
+.payout-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-top: 9px; }
 .payout-place { display: grid; gap: 7px; padding: 11px 12px 12px; border: 1px solid #dfe4df; border-radius: 4px; background: #fff; }
 .payout-place label { color: #79847c; font-family: "Barlow Condensed", sans-serif; font-size: 12px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; }
 .payout-input { display: flex; align-items: center; gap: 6px; color: #657168; font-size: 14px; }
@@ -237,7 +241,7 @@ h2 { font-size: 27px; line-height: 1; }
   .stat-block strong { font-size: 17px; }
   .settings-grid { grid-template-columns: 1fr 1fr; }
   .settings-grid .field:last-child { grid-column: span 2; }
-  .payout-grid { gap: 6px; }
+  .payout-grid { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 6px; }
   .payout-place { padding: 9px 8px 10px; }
   .payout-amount { font-size: 20px; }
 }
@@ -288,4 +292,37 @@ h2 { font-size: 27px; line-height: 1; }
 @media (max-width: 520px) {
   .help-link { display: none; }
   .headline-actions { gap: 12px; }
+}
+
+/* Chipkoffer */
+.chip-intro { margin: 12px 0 10px; color: #79847c; font-size: 11px; line-height: 1.5; }
+.chip-rows { display: grid; gap: 6px; max-width: 420px; }
+.chip-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 26px; align-items: center; gap: 8px; }
+.chip-row-head { color: #79847c; font-size: 10px; }
+.chip-row input { min-width: 0; height: 34px; padding: 0 9px; border: 1px solid #dbe1db; border-radius: 3px; outline: none; color: var(--ink); background: #fff; font-size: 13px; }
+.chip-row input:focus, .chip-reserve input:focus, .payout-places input:focus { border-color: var(--green); box-shadow: 0 0 0 2px #248b6217; outline: none; }
+.chip-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; max-width: 420px; margin-top: 10px; }
+.chip-reserve { display: flex; align-items: center; gap: 8px; color: #79847c; font-size: 11px; }
+.chip-reserve input { width: 62px; height: 32px; padding: 0 8px; border: 1px solid #dbe1db; border-radius: 3px; color: var(--ink); background: #fff; font-size: 13px; }
+.chip-result { margin-top: 14px; }
+.chip-summary { margin: 0 0 9px; font-size: 13px; }
+.chip-summary span { color: #79847c; }
+.chip-table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #dfe4df; font-size: 12px; font-variant-numeric: tabular-nums; }
+.chip-table th, .chip-table td { padding: 6px 9px; border-bottom: 1px solid #e6eae5; text-align: right; }
+.chip-table th:first-child, .chip-table td:first-child { text-align: left; }
+.chip-table th { color: #79847c; font-size: 10px; font-weight: 600; }
+.chip-table tr.is-unused td { color: #a3aca6; }
+.chip-warning { margin: 9px 0 0; padding: 8px 11px; border-left: 3px solid var(--red); border-radius: 2px; color: #7a2524; background: #fdeeee; font-size: 12px; line-height: 1.45; }
+
+/* Prüfung der Blindstruktur gegen die Chips */
+.level-alert, .level-colorup { display: block; margin-top: 2px; font-size: 9px; font-style: normal; font-weight: 700; }
+.level-alert { color: var(--red); }
+.level-colorup { color: var(--blue); }
+.level-row.is-unpayable { box-shadow: inset 3px 0 var(--red); }
+.level-row.is-unpayable .level-blinds strong { color: var(--red); }
+.level-row-edit.is-unpayable input { border-color: #e9a3a3; }
+.structure-warning { margin: 10px 0 0; padding: 8px 11px; border-left: 3px solid var(--red); border-radius: 2px; color: #7a2524; background: #fdeeee; font-size: 11px; line-height: 1.45; }
+@media (max-width: 520px) {
+  .chip-table th, .chip-table td { padding: 5px 6px; }
+  .chip-table { font-size: 11px; }
 }

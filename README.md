@@ -32,6 +32,10 @@ Zulässig sind 1 bis 100 Einträge, Level von 1 bis 240 Minuten und Pausen mit d
 
 Die App ist öffentlich und braucht kein Login. Jeder Browser bekommt beim ersten Aufruf ein eigenes Turnier mit zufälliger ID; sie steht in der Adresse (`?t=…`). Wer diesen Link öffnet, z. B. auf einem zweiten Gerät, steuert dasselbe Turnier. Den Link deshalb nur an Mitspielende weitergeben. Turniere, die 180 Tage nicht verändert wurden, löscht der Server automatisch.
 
+## Chipkoffer und Auszahlung
+
+Im Bereich «Chipkoffer» werden Chipwerte und Anzahl erfasst. `public/chips.js` berechnet daraus die Stückelung pro Spieler (plus optionale Rebuy-Reserve), meldet fehlende Chips, prüft jedes Level gegen den kleinsten Chip im Spiel und bestimmt Color-ups. Die Zahl der bezahlten Plätze ist frei (1–20); die App schlägt Plätze und Prozente passend zur Zahl der Einträge vor. Die Rechenfunktionen haben keinen DOM-Zugriff und lassen sich mit `node -e "require('./public/chips.js')"` direkt testen.
+
 ## Blindstruktur mit KI-Chat
 
 Vorgaben eintragen, „Prompt kopieren“ klicken und den Prompt in ChatGPT, Claude o. Ä. einfügen. Die Antwort komplett zurück ins Feld „Antwort der KI einfügen“ kopieren und übernehmen; Codeblöcke und Begleittext werden ignoriert. Spieler und Startstack fliessen automatisch in den Prompt ein.

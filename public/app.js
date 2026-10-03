@@ -28,7 +28,9 @@ const state = {
   payouts: [50, 30, 20],
   alarmSound: 'soft',
   locked: false,
-  prompt: { durationHours: 4, breakEvery: 60, breakLength: 10, chips: '25, 100, 500, 1000, 5000', wishes: '' }
+  chipCase: DEFAULT_CHIP_CASE.map((chip) => ({ ...chip })),
+  rebuyReserve: 0,
+  prompt: { durationHours: 4, breakEvery: 60, breakLength: 10, wishes: '' }
 };
 const DEFAULT_PROMPT = { ...state.prompt };
 // Ein Durchgang pro Intervall; wiederholt sich, bis der Alarm quittiert wird.
@@ -47,7 +49,6 @@ const PROMPT_FIELDS = {
   'prompt-duration': 'durationHours',
   'prompt-break-every': 'breakEvery',
   'prompt-break-length': 'breakLength',
-  'prompt-chips': 'chips',
   'ai-prompt': 'wishes'
 };
 
@@ -112,7 +113,7 @@ function bindEvents() {
   $('export-button').addEventListener('click', exportStructure);
   $('apply-json-button').addEventListener('click', applyJsonEditor);
   $('json-toggle').addEventListener('click', toggleJsonEditor);
-  $('settings-toggle').addEventListener('click', toggleSettings);
+  $('settings-toggle').addEventListener('click', () => toggleSection('settings-toggle', 'settings-content'));
   $('copy-prompt-button').addEventListener('click', copyPrompt);
   $('prompt-preview').addEventListener('focus', () => $('prompt-preview').select());
   $('test-alarm-button').addEventListener('click', testAlarm);
@@ -140,9 +141,22 @@ function bindEvents() {
   $('levels-list').addEventListener('keydown', handleLevelKey);
   $('edit-levels-button').addEventListener('click', toggleEditMode);
   $('add-break-button').addEventListener('click', addBreak);
-  for (const id of ['initial-players', 'starting-stack', 'buy-in', 'payout-first', 'payout-second', 'payout-third']) {
+  for (const id of ['initial-players', 'starting-stack', 'buy-in']) {
     $(id).addEventListener('change', updateSettingsFromInputs);
   }
+  $('payout-places').addEventListener('change', () => setPaidPlaces(Number($('payout-places').value)));
+  $('payout-recommend-button').addEventListener('click', () => setPaidPlaces(recommendedPaidPlaces(state.entries)));
+  $('payout-grid').addEventListener('change', updatePayoutShare);
+  $('chips-toggle').addEventListener('click', () => toggleSection('chips-toggle', 'chips-content'));
+  $('chip-rows').addEventListener('input', updateChipCaseFromInputs);
+  $('chip-rows').addEventListener('change', () => { normalizeChipCase(); saveState(); });
+  $('chip-rows').addEventListener('click', removeChipRow);
+  $('add-chip-button').addEventListener('click', addChipRow);
+  $('rebuy-reserve').addEventListener('input', () => {
+    state.rebuyReserve = clamp(Math.floor(Number($('rebuy-reserve').value) || 0), 0, 200);
+    renderChipAnalysis();
+    saveState();
+  });
 }
 
 function restoreState(saved) {
@@ -157,7 +171,9 @@ function restoreState(saved) {
   state.buyIn = Math.max(0, Number(state.buyIn) || 0);
   state.eliminated = clamp(Math.floor(Number(state.eliminated) || 0), 0, state.entries - 1);
   state.rebuys = Math.max(0, Math.floor(Number(state.rebuys) || 0));
-  state.payouts = Array.isArray(state.payouts) && state.payouts.length === 3 ? state.payouts : [50, 30, 20];
+  state.payouts = sanitizePayouts(state.payouts);
+  state.chipCase = sanitizeChipCase(saved.chipCase ?? legacyChipCase(saved.prompt?.chips));
+  state.rebuyReserve = clamp(Math.floor(Number(state.rebuyReserve) || 0), 0, 200);
   state.prompt = sanitizePrompt(saved.prompt);
   if (!ALARM_SOUNDS[state.alarmSound]) state.alarmSound = 'soft';
   state.locked = state.locked === true;
@@ -415,10 +431,9 @@ function render() {
   $('initial-players').value = state.initialPlayers;
   $('starting-stack').value = state.startingStack;
   $('buy-in').value = state.buyIn;
-  $('payout-first').value = state.payouts[0];
-  $('payout-second').value = state.payouts[1];
-  $('payout-third').value = state.payouts[2];
-  updatePayouts();
+  renderPayoutGrid();
+  renderChipRows();
+  $('rebuy-reserve').value = state.rebuyReserve;
   syncPromptInputs();
   $('alarm-sound').value = state.alarmSound;
   renderLock();
@@ -435,13 +450,19 @@ function renderTimer() {
   $('small-blind-display').textContent = level.type === 'break' ? 'Pause' : formatNumber(level.smallBlind);
   $('big-blind-display').textContent = level.type === 'break' ? '' : formatNumber(level.bigBlind);
   $('blind-separator').hidden = level.type === 'break';
-  $('ante-display').textContent = level.type === 'break' ? 'CHIPS ZÄHLEN' : level.ante ? `ANTE ${formatNumber(level.ante)}` : 'OHNE ANTE';
+  const { colorUps } = structureAnalysis();
+  const colorUpNow = colorUps.get(state.levelIndex);
+  $('ante-display').textContent = level.type === 'break'
+    ? (colorUpNow ? `COLOR-UP: ${chipLabel(colorUpNow).toUpperCase()} RAUS` : 'CHIPS ZÄHLEN')
+    : level.ante ? `ANTE ${formatNumber(level.ante)}` : 'OHNE ANTE';
   const progress = levelDuration(level) ? state.secondsLeft / levelDuration(level) : 0;
   $('timer-progress').style.transform = `scaleX(${clamp(progress, 0, 1)})`;
   $('alarm-overlay').hidden = state.status !== 'alarm';
   const next = state.levels[state.levelIndex + 1];
+  const colorUpNext = colorUps.get(state.levelIndex + 1);
   $('next-level-caption').textContent = next
     ? (next.type === 'break' ? `NÄCHSTES · PAUSE ${next.durationMinutes} MIN` : `NÄCHSTES LEVEL · ${formatNumber(next.smallBlind)} / ${formatNumber(next.bigBlind)}`)
+      + (colorUpNext ? ` · COLOR-UP ${chipLabel(colorUpNext).toUpperCase()}` : '')
     : 'LETZTES LEVEL';
 }
 
@@ -457,8 +478,15 @@ function renderStats() {
 
 function renderLevels() {
   $('levels-list').classList.toggle('is-editing', editMode);
+  const analysis = structureAnalysis();
+  const smallestChip = chipValuesInPlay()[0];
   $('levels-list').innerHTML = state.levels.map((level, index) => {
     const isBreak = level.type === 'break';
+    const unpayable = analysis.unpayable.has(index);
+    const colorUp = analysis.colorUps.get(index);
+    const flags = `${unpayable ? ' is-unpayable' : ''}`;
+    const notes = `${unpayable ? `<em class="level-alert">Nicht mit ${formatNumber(smallestChip)}er-Chips bezahlbar</em>` : ''}${
+      colorUp ? `<em class="level-colorup">Color-up: ${chipLabel(colorUp)} entfernen</em>` : ''}`;
     const name = isBreak ? 'Pause' : `Level ${levelNumber(index)}`;
     const number = `<span class="level-number">${isBreak ? 'Ⅱ' : String(levelNumber(index)).padStart(2, '0')}</span>`;
     const deleteButton = `<button class="level-delete" type="button" data-delete="${index}" aria-label="${name} löschen" title="Entfernen">×</button>`;
@@ -467,19 +495,21 @@ function renderLevels() {
       const fields = isBreak
         ? '<span class="level-field level-field-break">Pause</span>'
         : `${input('smallBlind', 'SB')}${input('bigBlind', 'BB')}${input('ante', 'Ante')}`;
-      return `<div class="level-row level-row-edit${index === state.levelIndex ? ' active' : ''}" data-index="${index}">
+      return `<div class="level-row level-row-edit${index === state.levelIndex ? ' active' : ''}${flags}" data-index="${index}">
         ${number}<span class="level-fields">${fields}${input('durationMinutes', 'Min')}</span>${deleteButton}
       </div>`;
     }
     const blindText = isBreak ? 'Pause' : `${formatNumber(level.smallBlind)} / ${formatNumber(level.bigBlind)}`;
     const anteText = isBreak ? 'Blindpause' : level.ante ? `Ante ${formatNumber(level.ante)}` : 'Ohne Ante';
-    return `<div class="level-row${index === state.levelIndex ? ' active' : ''}" data-index="${index}" role="button" tabindex="0" aria-label="${isBreak ? 'Pause' : `${name}: ${blindText}`} auswählen">
+    return `<div class="level-row${index === state.levelIndex ? ' active' : ''}${flags}" data-index="${index}" role="button" tabindex="0" aria-label="${isBreak ? 'Pause' : `${name}: ${blindText}`} auswählen">
       ${number}
-      <span class="level-blinds"><strong>${blindText}</strong><span>${anteText}</span></span>
+      <span class="level-blinds"><strong>${blindText}</strong><span>${anteText}</span>${notes}</span>
       <span class="level-duration">${level.durationMinutes} MIN</span>
       ${deleteButton}
     </div>`;
   }).join('');
+  $('structure-warning').hidden = !analysis.unpayable.size;
+  $('structure-warning').textContent = structureWarning(analysis);
   $('level-count').textContent = `${state.levels.filter((level) => level.type === 'level').length} LEVELS`;
   const minutes = state.levels.reduce((sum, level) => sum + level.durationMinutes, 0);
   $('total-duration').textContent = `GESAMT ${Math.floor(minutes / 60)}H ${String(minutes % 60).padStart(2, '0')}M`;
@@ -610,22 +640,168 @@ function updateSettingsFromInputs() {
   state.startingStack = Math.max(1, Math.floor(Number($('starting-stack').value) || 1));
   state.buyIn = Math.max(0, Number($('buy-in').value) || 0);
   state.eliminated = Math.min(state.eliminated, state.entries - 1);
-  state.payouts = ['payout-first', 'payout-second', 'payout-third'].map((id) => clamp(Number($(id).value) || 0, 0, 100));
   $('initial-players').value = state.initialPlayers;
   $('starting-stack').value = state.startingStack;
   $('buy-in').value = state.buyIn;
   renderStats();
-  renderPromptPreview();
+  renderChipAnalysis();
   saveState();
 }
 
+function sanitizePayouts(payouts) {
+  if (!Array.isArray(payouts) || !payouts.length || payouts.length > MAX_PAID_PLACES) return payoutTemplate(3);
+  return payouts.map((share) => clamp(Math.round(Number(share) || 0), 0, 100));
+}
+
+function setPaidPlaces(places) {
+  state.payouts = payoutTemplate(clamp(Math.floor(places) || 1, 1, MAX_PAID_PLACES));
+  renderPayoutGrid();
+  saveState();
+}
+
+function updatePayoutShare(event) {
+  const place = Number(event.target.dataset.place);
+  if (!Number.isInteger(place) || !(place in state.payouts)) return;
+  state.payouts[place] = clamp(Math.round(Number(event.target.value) || 0), 0, 100);
+  event.target.value = state.payouts[place];
+  updatePayouts();
+  saveState();
+}
+
+function renderPayoutGrid() {
+  $('payout-places').value = state.payouts.length;
+  $('payout-grid').innerHTML = state.payouts.map((share, place) => `<div class="payout-place">
+      <label for="payout-share-${place}">${place + 1}. Platz</label>
+      <span class="payout-input"><input id="payout-share-${place}" type="number" inputmode="numeric" min="0" max="100" value="${share}" data-place="${place}"><span>%</span></span>
+      <strong class="payout-amount" id="payout-amount-${place}">CHF 0</strong>
+    </div>`).join('');
+  updatePayouts();
+}
+
 function updatePayouts() {
-  const total = state.payouts.reduce((sum, share) => sum + Number(share || 0), 0);
+  const total = state.payouts.reduce((sum, share) => sum + share, 0);
   $('payout-total').textContent = total === 100 ? 'Total 100%' : `Total ${total}% (soll 100%)`;
   $('payout-total').classList.toggle('invalid', total !== 100);
-  state.payouts.forEach((share, index) => {
-    $(`payout-amount-${index}`).textContent = formatCurrency(state.entries * state.buyIn * Number(share || 0) / 100);
+  payoutAmounts(state.entries * state.buyIn, state.payouts).forEach((amount, place) => {
+    const target = $(`payout-amount-${place}`);
+    if (target) target.textContent = formatCurrency(amount);
   });
+  const recommended = recommendedPaidPlaces(state.entries);
+  $('payout-hint').hidden = recommended === state.payouts.length;
+  $('payout-hint-text').textContent = `Bei ${state.entries} Einträgen sind ${recommended} bezahlte ${recommended === 1 ? 'Platz' : 'Plätze'} üblich.`;
+}
+
+// Alte Stände kannten nur Chipwerte als Text; Anzahl dann mit 100 pro Wert annehmen.
+function legacyChipCase(text) {
+  if (typeof text !== 'string') return undefined;
+  const values = text.split(/[^\d]+/).filter(Boolean).map(Number);
+  return values.length ? values.map((value) => ({ value, count: 100 })) : undefined;
+}
+
+let distributionCache = { key: '', result: null };
+
+function chipDistribution() {
+  const key = JSON.stringify([state.chipCase, state.startingStack, state.initialPlayers, state.rebuyReserve]);
+  if (distributionCache.key !== key) {
+    distributionCache = { key, result: distributeStack(state.chipCase, state.startingStack, state.initialPlayers, state.rebuyReserve) };
+  }
+  return distributionCache.result;
+}
+
+// Ohne gültige Stückelung gegen alle Chips im Koffer prüfen.
+function chipValuesInPlay() {
+  const distribution = chipDistribution();
+  return distribution.ok ? distribution.valuesInPlay : state.chipCase.filter((chip) => chip.count > 0).map((chip) => chip.value);
+}
+
+function structureAnalysis() {
+  return analyzeStructure(state.levels, chipValuesInPlay());
+}
+
+function renderChipRows() {
+  $('chip-rows').innerHTML = `<div class="chip-row chip-row-head"><span>Wert</span><span>Anzahl im Koffer</span><span></span></div>${
+    state.chipCase.map((chip, index) => `<div class="chip-row" data-chip="${index}">
+      <input type="number" inputmode="numeric" min="1" step="1" value="${chip.value}" data-chip-field="value" aria-label="Chipwert ${index + 1}">
+      <input type="number" inputmode="numeric" min="0" step="1" value="${chip.count}" data-chip-field="count" aria-label="Anzahl Chips à ${chip.value}">
+      <button class="level-delete" type="button" data-remove-chip="${index}" aria-label="Chipwert ${chip.value} entfernen" title="Entfernen">×</button>
+    </div>`).join('')}`;
+  $('add-chip-button').disabled = state.chipCase.length >= MAX_CHIP_ROWS;
+  renderChipAnalysis();
+}
+
+function updateChipCaseFromInputs(event) {
+  const row = event.target.closest('[data-chip]');
+  const field = event.target.dataset.chipField;
+  if (!row || !field) return;
+  const chip = state.chipCase[Number(row.dataset.chip)];
+  const value = Math.floor(Number(event.target.value));
+  if (!chip || !Number.isFinite(value)) return;
+  chip[field] = Math.max(field === 'value' ? 1 : 0, value);
+  renderChipAnalysis();
+}
+
+// Beim Verlassen eines Felds sortieren und doppelte Werte zusammenführen.
+function normalizeChipCase() {
+  const normalized = sanitizeChipCase(state.chipCase);
+  const changed = JSON.stringify(normalized) !== JSON.stringify(state.chipCase);
+  state.chipCase = normalized;
+  if (changed) renderChipRows();
+}
+
+function addChipRow() {
+  if (state.chipCase.length >= MAX_CHIP_ROWS) return;
+  const largest = state.chipCase.at(-1)?.value || 0;
+  state.chipCase.push({ value: largest ? largest * 5 : 25, count: 50 });
+  renderChipRows();
+  saveState();
+}
+
+function removeChipRow(event) {
+  const button = event.target.closest('[data-remove-chip]');
+  if (!button) return;
+  state.chipCase.splice(Number(button.dataset.removeChip), 1);
+  renderChipRows();
+  saveState();
+}
+
+function renderChipAnalysis() {
+  const distribution = chipDistribution();
+  let html;
+  if (!distribution.ok) {
+    html = `<p class="chip-warning">${escapeHtml(distribution.reason)}</p>`;
+  } else {
+    const perPlayer = distribution.rows.filter((row) => row.perPlayer > 0)
+      .map((row) => `${row.perPlayer} × ${formatNumber(row.value)}`).join(' + ');
+    const setsText = state.rebuyReserve
+      ? `${state.initialPlayers} Spieler + ${state.rebuyReserve} Rebuy-Stacks`
+      : `${state.initialPlayers} Spieler`;
+    html = `<p class="chip-summary"><strong>Pro Spieler:</strong> ${perPlayer} = ${formatNumber(state.startingStack)} <span>(${distribution.chipsPerPlayer} Chips)</span></p>
+      <table class="chip-table">
+        <thead><tr><th>Wert</th><th>Pro Spieler</th><th>Für ${escapeHtml(setsText)}</th><th>Im Koffer</th><th>Übrig</th></tr></thead>
+        <tbody>${distribution.rows.map((row) => `<tr${row.perPlayer ? '' : ' class="is-unused"'}>
+          <td>${formatNumber(row.value)}</td><td>${row.perPlayer}</td><td>${formatNumber(row.needed)}</td><td>${formatNumber(row.available)}</td><td>${formatNumber(row.rest)}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+      ${distribution.warnings.map((warning) => `<p class="chip-warning">${escapeHtml(warning)}</p>`).join('')}`;
+  }
+  $('chip-result').innerHTML = html;
+  renderLevels();
+  renderTimer();
+  renderPromptPreview();
+}
+
+function structureWarning(analysis = structureAnalysis()) {
+  const count = analysis.unpayable.size;
+  if (!count) return '';
+  return `${count} ${count === 1 ? 'Level passt' : 'Level passen'} nicht zu den Chips im Spiel (kleinster Chip ${formatNumber(chipValuesInPlay()[0])}). Rot markierte Werte anpassen oder Chipkoffer prüfen.`;
+}
+
+function escapeHtml(text) {
+  return String(text).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
+}
+
+function chipLabel(values) {
+  return values.map((value) => `${formatNumber(value)}er`).join(' und ');
 }
 
 function sanitizePrompt(saved) {
@@ -634,7 +810,6 @@ function sanitizePrompt(saved) {
     durationHours: clamp(Number(prompt.durationHours) || DEFAULT_PROMPT.durationHours, 0.5, 24),
     breakEvery: clamp(Math.floor(Number(prompt.breakEvery) || 0), 0, 600),
     breakLength: clamp(Math.floor(Number(prompt.breakLength) || DEFAULT_PROMPT.breakLength), 1, 120),
-    chips: String(prompt.chips ?? '').slice(0, 200),
     wishes: String(prompt.wishes ?? '').slice(0, 1000)
   };
 }
@@ -674,7 +849,7 @@ async function importFile(event) {
   try {
     const data = JSON.parse(await file.text());
     applyStructure(data);
-    showToast(`${state.levels.length} Einträge importiert.`);
+    showToast(`${state.levels.length} Einträge importiert. ${structureWarning()}`);
   } catch (error) {
     showToast(error.message || 'JSON-Datei konnte nicht gelesen werden.');
   }
@@ -693,7 +868,7 @@ function exportStructure() {
 function applyJsonEditor() {
   try {
     applyStructure(extractJson($('json-editor').value));
-    showToast('Blindstruktur übernommen.');
+    showToast(`Blindstruktur übernommen. ${structureWarning()}`);
   } catch (error) {
     showToast(error.message || 'JSON ist ungültig.');
   }
@@ -733,7 +908,12 @@ function isValidStructure(data) {
 
 function buildPrompt() {
   const prompt = sanitizePrompt(state.prompt);
-  const chips = prompt.chips.split(/[^\d]+/).filter(Boolean).map(Number).filter((value) => value > 0);
+  const distribution = chipDistribution();
+  const chips = chipValuesInPlay();
+  const chipCase = state.chipCase.filter((chip) => chip.count > 0).map((chip) => `${chip.count} × ${chip.value}`).join(', ');
+  const stackLine = distribution.ok
+    ? `- Stückelung pro Spieler (fest): ${distribution.rows.filter((row) => row.perPlayer > 0).map((row) => `${row.perPlayer} × ${row.value}`).join(' + ')}\n- Chipwerte im Spiel: ${chips.join(', ')}`
+    : `- Chipkoffer: ${chipCase || 'unbekannt'}`;
   const hours = String(prompt.durationHours).replace('.', ',');
   const breaks = prompt.breakEvery > 0
     ? `etwa alle ${prompt.breakEvery} Minuten Spielzeit eine Pause von ${prompt.breakLength} Minuten`
@@ -744,12 +924,13 @@ Turnierdaten:
 - Spieler: ${state.initialPlayers}
 - Startstack: ${state.startingStack} Chips pro Spieler (insgesamt ${state.initialPlayers * state.startingStack} Chips im Spiel)
 - Geplante Spieldauer: etwa ${hours} Stunden bis zum Sieger
-- Verfügbare Chipwerte: ${chips.length ? chips.join(', ') : 'beliebig'}
+${stackLine}
 - Pausen: ${breaks}
 ${prompt.wishes.trim() ? `- Weitere Wünsche: ${prompt.wishes.trim()}\n` : ''}
 Anforderungen:
 - Levellängen und Blindsteigerung so wählen, dass das Turnier ungefähr in der geplanten Spieldauer entschieden ist. Danach noch 2–3 weitere Level anhängen, falls es länger dauert.
-${chips.length ? `- Alle Blinds und Antes müssen mit den verfügbaren Chipwerten bezahlbar sein, also Vielfache von ${Math.min(...chips)}. Steigen die Blinds, darf der kleinste Chip später wegfallen (Color-up); dann sind die Werte Vielfache des nächstgrösseren Chips.\n` : ''}- Pausen sind eigene Einträge an den passenden Stellen.
+${chips.length ? `- Small Blind, Big Blind und Ante müssen mit den Chips im Spiel bezahlbar sein, also immer Vielfache von ${chips[0]}.
+- Color-up: Der kleinste Chip darf erst wegfallen, wenn alle folgenden Werte Vielfache des nächstgrösseren Chips sind. Plane solche Wechsel möglichst direkt nach einer Pause.\n` : ''}- Pausen sind eigene Einträge an den passenden Stellen.
 
 Antworte ausschliesslich mit JSON in genau diesem Format, ohne weiteren Text:
 {"levels":[{"smallBlind":25,"bigBlind":50,"ante":0,"durationMinutes":20,"type":"level"},{"smallBlind":0,"bigBlind":0,"ante":0,"durationMinutes":10,"type":"break"}]}
@@ -797,7 +978,7 @@ function applyAnswer() {
   try {
     applyStructure(extractJson(answer));
     $('ai-answer').value = '';
-    showToast(`${state.levels.length} Einträge übernommen.`);
+    showToast(`${state.levels.length} Einträge übernommen. ${structureWarning()}`);
   } catch (error) {
     showToast(error.message || 'Antwort konnte nicht gelesen werden.');
   }
@@ -841,11 +1022,11 @@ function toggleJsonEditor() {
   $('json-toggle').lastElementChild.textContent = open ? '⌃' : '⌄';
 }
 
-function toggleSettings() {
-  const open = $('settings-toggle').getAttribute('aria-expanded') !== 'true';
-  $('settings-toggle').setAttribute('aria-expanded', String(open));
-  $('settings-content').hidden = !open;
-  $('settings-toggle').innerHTML = `${open ? 'Einklappen' : 'Ausklappen'} <span>${open ? '⌃' : '⌄'}</span>`;
+function toggleSection(buttonId, contentId) {
+  const open = $(buttonId).getAttribute('aria-expanded') !== 'true';
+  $(buttonId).setAttribute('aria-expanded', String(open));
+  $(contentId).hidden = !open;
+  $(buttonId).innerHTML = `${open ? 'Einklappen' : 'Ausklappen'} <span>${open ? '⌃' : '⌄'}</span>`;
 }
 
 // Vollbild schaltet den Anzeigemodus (nur Uhr und Kennzahlen) mit ein.
@@ -896,7 +1077,7 @@ function showToast(message) {
   toast.textContent = message;
   toast.classList.add('is-visible');
   window.clearTimeout(toastHandle);
-  toastHandle = window.setTimeout(() => toast.classList.remove('is-visible'), 3200);
+  toastHandle = window.setTimeout(() => toast.classList.remove('is-visible'), Math.max(3200, message.length * 55));
 }
 
 function setSavedStatus(saved, label) {

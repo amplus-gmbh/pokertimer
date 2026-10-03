@@ -94,9 +94,10 @@
           <div class="feature"><h3>Blind Timer mit Alarm</h3><p>Countdown pro Level, Alarm am Levelende, der sich wiederholt, bis du ihn quittierst. Drei Alarmtöne: dezent, mittel oder aggressiv.</p></div>
           <div class="feature"><h3>Anzeigemodus für den TV</h3><p>Ein Klick auf Vollbild zeigt nur noch Uhr, Blinds, nächstes Level und Kennzahlen – bildschirmfüllend und gut lesbar vom Tisch aus.</p></div>
           <div class="feature"><h3>Blindstruktur frei bearbeiten</h3><p>Levels und Pausen hinzufügen, löschen und direkt in der Liste anpassen: Small Blind, Big Blind, Ante und Dauer.</p></div>
-          <div class="feature"><h3>Blindstruktur per KI</h3><p>Spieldauer, Chipwerte und Pausen eingeben, Prompt kopieren, in ChatGPT, Claude oder Gemini einfügen und die Antwort zurückkopieren.</p></div>
+          <div class="feature"><h3>Blindstruktur per KI</h3><p>Spieldauer und Pausen eingeben, Prompt kopieren, in ChatGPT, Claude oder Gemini einfügen und die Antwort zurückkopieren.</p></div>
           <div class="feature"><h3>Spieler, Rebuys und Average Stack</h3><p>Busts und Rebuys mit einem Klick erfassen. Spieler im Spiel und Average Stack werden laufend berechnet.</p></div>
-          <div class="feature"><h3>Preispool und Auszahlung</h3><p>Buy-in eintragen, Prozente für die ersten drei Plätze festlegen – die Beträge in CHF werden automatisch berechnet.</p></div>
+          <div class="feature"><h3>Preispool und Auszahlung</h3><p>Buy-in eintragen und bis zu 20 bezahlte Plätze festlegen. Die App schlägt passend zur Spielerzahl Plätze und Prozente vor und rechnet die Beträge in CHF aus.</p></div>
+          <div class="feature"><h3>Chipkoffer und Stückelung</h3><p>Chipwerte und Anzahl im Koffer eintragen: Die App berechnet die Stückelung pro Spieler, warnt, wenn die Chips nicht reichen, prüft jede Blindstruktur und zeigt, wann ein Color-up fällig ist.</p></div>
           <div class="feature"><h3>Sperre gegen Fehlklicks</h3><p>Beim Start sperrt sich das Turnier: Level wechseln, zurücksetzen oder die Struktur ersetzen geht erst nach bewusstem Entsperren. Pause, Bust und Rebuy bleiben möglich.</p></div>
           <div class="feature"><h3>Wiedereinstieg nach Unterbruch</h3><p>Mit «Level &amp; Zeit setzen» mitten in einem Level weitermachen, zum Beispiel Level 7 mit 8:30 Restzeit.</p></div>
           <div class="feature"><h3>Mehrere Geräte</h3><p>Turnier-Link auf einem zweiten Gerät öffnen, etwa Laptop am TV und Handy am Tisch. Beide zeigen dasselbe Turnier.</p></div>
@@ -108,7 +109,7 @@
         <h2>Anleitung: Pokerturnier in 5 Schritten starten</h2>
         <ol class="steps">
           <li><strong>Timer öffnen.</strong> <a href="/">pokertimer.geekz.ch</a> aufrufen. Dein Browser bekommt automatisch ein eigenes Turnier; die Adresse enthält dessen ID.</li>
-          <li><strong>Spieler und Preisgeld eintragen.</strong> Unter «Spieler &amp; Preisgeld» Anzahl Spieler, Startstack und Buy-in setzen. Die Auszahlung ist mit 50/30/20 % vorbelegt und lässt sich anpassen.</li>
+          <li><strong>Spieler, Preisgeld und Chips eintragen.</strong> Unter «Spieler &amp; Preisgeld» Anzahl Spieler, Startstack, Buy-in und die Zahl der bezahlten Plätze setzen. Unter «Chipkoffer» die vorhandenen Chips eintragen; die App zeigt, wie viele Chips jeder Spieler bekommt.</li>
           <li><strong>Blindstruktur wählen.</strong> Die Standardstruktur übernehmen, Levels mit «Bearbeiten» anpassen, eine JSON-Datei importieren oder eine Struktur per KI erstellen (siehe unten).</li>
           <li><strong>Alarm testen.</strong> Unter der Auszahlung den Alarmton wählen und mit «Alarm testen» die Lautstärke prüfen.</li>
           <li><strong>Start drücken.</strong> Das Turnier sperrt sich dabei automatisch gegen versehentliche Levelwechsel. Für den Bildschirm am Tisch den Vollbild-Button oben rechts nutzen. Am Levelende ertönt der Alarm; «Alarm aus · Weiter» startet das nächste Level.</li>
@@ -120,11 +121,11 @@
         <h2>Blindstruktur mit KI erstellen</h2>
         <p>Der Poker Timer schickt nichts selbst an eine KI. Stattdessen erzeugt er einen fertigen Prompt, den du in einen beliebigen KI-Chat kopierst. So brauchst du keinen API-Schlüssel und behältst die Kontrolle.</p>
         <ol>
-          <li>Im Feld «Struktur mit KI-Chat» Spieldauer, verfügbare Chipwerte und Pausen eintragen. Spieler und Startstack werden automatisch übernommen.</li>
+          <li>Im Feld «Struktur mit KI-Chat» Spieldauer und Pausen eintragen. Spieler, Startstack und die Stückelung aus dem Chipkoffer werden automatisch übernommen.</li>
           <li>«Prompt kopieren» klicken und in ChatGPT, Claude, Gemini oder einen anderen Chat einfügen.</li>
           <li>Die komplette Antwort zurückkopieren und «Struktur übernehmen» klicken. Codeblöcke und Begleittext werden automatisch ignoriert.</li>
         </ol>
-        <p>Der Prompt verlangt, dass alle Blinds mit deinen Chips bezahlbar sind, also Vielfache des kleinsten Chipwerts.</p>
+        <p>Der Prompt verlangt, dass alle Blinds mit deinen Chips bezahlbar sind. Beim Übernehmen prüft der Timer jedes Level: Was sich mit den Chips im Spiel nicht bezahlen lässt, wird rot markiert. Color-ups werden in der Levelliste und während der Pause angezeigt.</p>
       </section>
 
       <section id="beispiele">
