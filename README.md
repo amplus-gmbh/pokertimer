@@ -36,6 +36,10 @@ Die App ist öffentlich und braucht kein Login. Jeder Browser bekommt beim erste
 
 Vorgaben eintragen, „Prompt kopieren“ klicken und den Prompt in ChatGPT, Claude o. Ä. einfügen. Die Antwort komplett zurück ins Feld „Antwort der KI einfügen“ kopieren und übernehmen; Codeblöcke und Begleittext werden ignoriert. Spieler und Startstack fliessen automatisch in den Prompt ein.
 
+## SEO-Landingpages
+
+`/gratis-poker-timer` (Deutsch) und `/free-poker-blind-timer` (Englisch) beschreiben Funktionen und Bedienung und sind auf die Suchbegriffe «gratis poker timer», «free blind timer» und «free poker blind timer» ausgerichtet. `robots.txt` und `sitemap.xml` liegen in `public/`; nach dem Deploy die Sitemap in der Google Search Console einreichen. Das Vorschaubild `public/img/poker-timer-vorschau.jpg` ist ein Screenshot des Anzeigemodus (1200 × 630).
+
 ## Hostinger Deployment
 
 Voraussetzung: Business-Webhosting oder ein Cloud-Tarif (nur diese bieten Node.js-Web-Apps in hPanel). Auf einem VPS läuft die App auch, muss dort aber manuell eingerichtet werden.

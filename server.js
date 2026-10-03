@@ -20,7 +20,8 @@ let dbError = null;
 const memoryStates = new Map();
 
 app.use(express.json({ limit: '64kb' }));
-app.use(express.static(path.join(__dirname, 'public')));
+// extensions: Landingpages ohne .html erreichbar (/gratis-poker-timer).
+app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'] }));
 
 app.get('/api/health', (req, res) => {
   res.json({ storage: pool ? 'mysql' : 'memory', dbReady, dbError });

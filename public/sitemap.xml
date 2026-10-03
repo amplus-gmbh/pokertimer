@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://pokertimer.geekz.ch/</loc>
+    <lastmod>2026-10-03</lastmod>
+  </url>
+  <url>
+    <loc>https://pokertimer.geekz.ch/gratis-poker-timer</loc>
+    <lastmod>2026-10-03</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://pokertimer.geekz.ch/gratis-poker-timer"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://pokertimer.geekz.ch/free-poker-blind-timer"/>
+  </url>
+  <url>
+    <loc>https://pokertimer.geekz.ch/free-poker-blind-timer</loc>
+    <lastmod>2026-10-03</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://pokertimer.geekz.ch/gratis-poker-timer"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://pokertimer.geekz.ch/free-poker-blind-timer"/>
+  </url>
+</urlset>

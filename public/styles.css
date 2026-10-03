@@ -28,6 +28,9 @@ button { color: inherit; }
 .brand-name { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 23px; letter-spacing: 1px; }
 .brand-name span { color: var(--green); margin-left: 4px; }
 .topbar-right { display: flex; align-items: center; gap: 19px; }
+.help-link { color: #68736d; font-size: 12px; text-decoration: none; }
+.help-link:hover { color: var(--ink); text-decoration: underline; }
+.is-display .help-link { display: none; }
 .session-state { display: inline-flex; align-items: center; gap: 8px; color: #68736d; font-size: 11px; }
 .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #e1ac40; }
 .status-dot.is-saved { background: var(--green); }
