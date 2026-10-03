@@ -30,26 +30,51 @@ Zulässig sind 1 bis 100 Einträge, Level von 1 bis 240 Minuten und Pausen mit d
 
 ## Hostinger Deployment
 
-1. In hPanel eine MySQL-Datenbank und einen Datenbankbenutzer anlegen und diesem Benutzer alle Rechte auf diese Datenbank geben. Hostinger zeigt die konkreten Werte für Host, Datenbankname und Benutzer an; den Host nicht ungeprüft als `localhost` übernehmen.
-2. Die Dateien per Git-Deployment oder Upload ins App-Verzeichnis deployen. In hPanel unter **Websites → Verwalten → Erweitert → Node.js** (Bezeichnung kann je nach Tarif variieren) eine Node.js-App anlegen. Startdatei: `server.js`; Node-Version: 18.17 oder neuer. Falls hPanel einen Startbefehl verlangt: `npm start`.
-3. Als Umgebungsvariablen in der Node.js-App-Konfiguration eintragen (ohne Anführungszeichen, keine `.env`-Datei ins öffentliche Deployment hochladen):
+Voraussetzung: Business-Webhosting oder ein Cloud-Tarif (nur diese bieten Node.js-Web-Apps in hPanel). Auf einem VPS läuft die App auch, muss dort aber manuell eingerichtet werden.
+
+### 1. Datenbank anlegen
+
+hPanel → **Websites → (geekz.ch) → Datenbanken → MySQL-Datenbanken** → neue Datenbank mit eigenem Benutzer anlegen. Datenbankname, Benutzer und Passwort notieren; Hostinger stellt dem Namen und Benutzer ein Präfix voran (z. B. `u123456789_pokertimer`). Der Host ist für Apps auf demselben Hosting `localhost`.
+
+### 2. Node.js-Web-App aus GitHub anlegen
+
+1. hPanel → **Websites → Website hinzufügen → Node.js-Web-App → Git-Repository importieren**.
+2. **Mit GitHub verbinden** und der Hostinger-GitHub-App Zugriff auf `amplus-gmbh/pokertimer` geben. Das Repo gehört einer Organisation: Bei der Installation die Organisation `amplus-gmbh` wählen bzw. dort freigeben lassen.
+3. Als Domain `pokertimer.geekz.ch` wählen. Liegt `geekz.ch` nicht bei Hostinger, beim DNS-Anbieter den von Hostinger angezeigten Eintrag für `pokertimer` setzen.
+4. Build-Einstellungen prüfen:
+
+| Einstellung | Wert |
+| --- | --- |
+| Framework | Express (bzw. „Andere“) |
+| Branch | `main` |
+| Node.js-Version | 22 oder 24 |
+| Root-Verzeichnis | `/` |
+| Build-Befehl | leer lassen |
+| Entry-Datei | `server.js` |
+| Paketmanager | npm |
+
+5. Unter **Umgebungsvariablen** eintragen (ohne Anführungszeichen; `PORT` setzt Hostinger selbst):
 
 | Variable | Wert |
 | --- | --- |
 | `NODE_ENV` | `production` |
-| `PORT` | Von Hostinger vorgegeben; falls nicht automatisch gesetzt, `3000` |
-| `DB_HOST` | MySQL-Host aus hPanel |
-| `DB_PORT` | `3306` (sofern hPanel keinen anderen Port zeigt) |
-| `DB_NAME` | Datenbankname aus hPanel |
-| `DB_USER` | Datenbankbenutzer aus hPanel |
-| `DB_PASSWORD` | Datenbankpasswort |
-| `APP_USER` | Gewünschter Benutzername für den Timer |
+| `DB_HOST` | `localhost` |
+| `DB_PORT` | `3306` |
+| `DB_NAME` | Datenbankname aus Schritt 1 |
+| `DB_USER` | Datenbankbenutzer aus Schritt 1 |
+| `DB_PASSWORD` | Datenbankpasswort aus Schritt 1 |
+| `APP_USER` | Benutzername für den Timer |
 | `APP_PASSWORD` | Langes, einzigartiges Passwort für den Timer |
-| `OPENAI_API_KEY` | Optional; nur falls KI-Generierung gewünscht |
+| `OPENAI_API_KEY` | Optional; nur für die KI-Generierung |
 | `OPENAI_MODEL` | Optional, Standard `gpt-4o-mini` |
 | `OPENAI_BASE_URL` | Optional, Standard `https://api.openai.com/v1` |
 
-4. Abhängigkeiten installieren lassen (`npm install` im App-Verzeichnis), App starten und die Subdomain `pokertimer.geekz.ch` in hPanel dieser Node.js-App zuordnen. SSL/HTTPS für die Subdomain aktivieren. Nach Änderungen an Umgebungsvariablen die Node-App neu starten.
-5. Mit `https://pokertimer.geekz.ch` prüfen. Der Browser fragt nach `APP_USER` und `APP_PASSWORD`. Der erste Start legt die Tabelle `tournament_state` automatisch an; die Zugangsdaten benötigen dafür `CREATE TABLE`-Rechte.
+6. **Deploy** klicken. Danach SSL für `pokertimer.geekz.ch` aktivieren, falls hPanel das nicht automatisch tut.
 
-**Wichtig:** Hostinger-Tarife unterscheiden sich darin, ob Node.js-Apps und Git-Deployment verfügbar sind. Wenn Node.js im Tarif nicht angeboten wird, kann diese App dort nicht als Node-Prozess laufen; dann ist ein Node-fähiger Tarif/VPS nötig. Die KI-API-Kosten richten sich nach dem konfigurierten Anbieter.
+### 3. Prüfen
+
+`https://pokertimer.geekz.ch` öffnen: Der Browser fragt nach `APP_USER`/`APP_PASSWORD`. Oben rechts muss **„Mit MySQL verbunden“** stehen; „Nur temporär gespeichert“ heisst, dass DB-Variablen fehlen. Im Runtime-Log von hPanel erscheint beim Start `MySQL verbunden; …`. Die Tabelle `tournament_state` wird beim ersten Start automatisch angelegt.
+
+### Updates
+
+Jeder Push auf `main` löst auf Hostinger automatisch Neuinstallation und Neustart aus. Geänderte Umgebungsvariablen werden erst nach einem erneuten Deploy bzw. Neustart wirksam.
