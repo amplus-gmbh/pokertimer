@@ -97,6 +97,8 @@
           <div class="feature"><h3>Blindstruktur per KI</h3><p>Spieldauer, Chipwerte und Pausen eingeben, Prompt kopieren, in ChatGPT, Claude oder Gemini einfügen und die Antwort zurückkopieren.</p></div>
           <div class="feature"><h3>Spieler, Rebuys und Average Stack</h3><p>Busts und Rebuys mit einem Klick erfassen. Spieler im Spiel und Average Stack werden laufend berechnet.</p></div>
           <div class="feature"><h3>Preispool und Auszahlung</h3><p>Buy-in eintragen, Prozente für die ersten drei Plätze festlegen – die Beträge in CHF werden automatisch berechnet.</p></div>
+          <div class="feature"><h3>Sperre gegen Fehlklicks</h3><p>Beim Start sperrt sich das Turnier: Level wechseln, zurücksetzen oder die Struktur ersetzen geht erst nach bewusstem Entsperren. Pause, Bust und Rebuy bleiben möglich.</p></div>
+          <div class="feature"><h3>Wiedereinstieg nach Unterbruch</h3><p>Mit «Level &amp; Zeit setzen» mitten in einem Level weitermachen, zum Beispiel Level 7 mit 8:30 Restzeit.</p></div>
           <div class="feature"><h3>Mehrere Geräte</h3><p>Turnier-Link auf einem zweiten Gerät öffnen, etwa Laptop am TV und Handy am Tisch. Beide zeigen dasselbe Turnier.</p></div>
           <div class="feature"><h3>JSON-Import und -Export</h3><p>Blindstrukturen als Datei sichern, weitergeben und beim nächsten Turnier wieder laden.</p></div>
         </div>
@@ -109,7 +111,7 @@
           <li><strong>Spieler und Preisgeld eintragen.</strong> Unter «Spieler &amp; Preisgeld» Anzahl Spieler, Startstack und Buy-in setzen. Die Auszahlung ist mit 50/30/20 % vorbelegt und lässt sich anpassen.</li>
           <li><strong>Blindstruktur wählen.</strong> Die Standardstruktur übernehmen, Levels mit «Bearbeiten» anpassen, eine JSON-Datei importieren oder eine Struktur per KI erstellen (siehe unten).</li>
           <li><strong>Alarm testen.</strong> Unter der Auszahlung den Alarmton wählen und mit «Alarm testen» die Lautstärke prüfen.</li>
-          <li><strong>Start drücken.</strong> Für den Bildschirm am Tisch den Vollbild-Button oben rechts nutzen. Am Levelende ertönt der Alarm; «Alarm aus · Weiter» startet das nächste Level.</li>
+          <li><strong>Start drücken.</strong> Das Turnier sperrt sich dabei automatisch gegen versehentliche Levelwechsel. Für den Bildschirm am Tisch den Vollbild-Button oben rechts nutzen. Am Levelende ertönt der Alarm; «Alarm aus · Weiter» startet das nächste Level.</li>
         </ol>
         <p>Während des Turniers erfasst du ausgeschiedene Spieler mit «− Bust» und Rebuys mit «+ Rebuy». Ein Rebuy erhöht Preispool und Chips im Spiel; der Average Stack passt sich an.</p>
       </section>
@@ -196,6 +198,7 @@
         <details><summary>Muss ich mich registrieren?</summary><p>Nein. Beim ersten Aufruf bekommt dein Browser automatisch ein eigenes Turnier. Es gibt kein Konto und kein Passwort.</p></details>
         <details><summary>Kann ich den Blind Timer auf mehreren Geräten gleichzeitig nutzen?</summary><p>Ja. Die Adresse enthält eine Turnier-ID (<code>?t=…</code>). Öffnest du denselben Link auf einem zweiten Gerät, zum Beispiel Laptop am TV und Handy am Tisch, steuerst du dasselbe Turnier. Ein Gerät übernimmt den Stand beim Laden. Gib den Link nur an Mitspielende weiter.</p></details>
         <details><summary>Läuft der Timer weiter, wenn ich den Browser schliesse?</summary><p>Ja. Der Timer speichert den Endzeitpunkt des Levels. Öffnest du das Turnier wieder, wird die Restzeit korrekt berechnet. Ist das Level inzwischen abgelaufen, erscheint der Alarm.</p></details>
+        <details><summary>Was tun, wenn der Timer unterbrochen wurde?</summary><p>Zuerst «Gesperrt» antippen und bestätigen. Bei Bedarf die Blindstruktur neu laden, dann über «Level &amp; Zeit setzen» das laufende Level und die Restzeit eintragen, zum Beispiel Level 7 mit 8:30, und Start drücken.</p></details>
         <details><summary>Wie lange sollte ein Blindlevel dauern?</summary><p>Für ein Home Game von 3 bis 5 Stunden sind 15 bis 20 Minuten pro Level üblich, für ein Turbo-Turnier 8 bis 12 Minuten. Mit einem Startstack von 100 bis 200 Big Blinds bleibt genug Spielraum.</p></details>
         <details><summary>Warum höre ich den Alarm auf dem iPhone nicht?</summary><p>iPhones geben Web-Töne im Lautlos-Modus nicht aus. Lautlos-Schalter deaktivieren, Lautstärke erhöhen und mit «Alarm testen» prüfen.</p></details>
         <details><summary>Welche Daten werden gespeichert?</summary><p>Nur der Turnierstand: Blindstruktur, Timer, Spielerzahlen und Einstellungen. Es gibt keine Konten und keine Tracking-Cookies. Turniere, die 180 Tage nicht verändert wurden, werden automatisch gelöscht.</p></details>

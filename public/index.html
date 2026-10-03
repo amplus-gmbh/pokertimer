@@ -37,7 +37,10 @@
       <section class="timer-column" aria-label="Blindtimer">
         <div class="timer-headline">
           <div><p class="eyebrow">TURNIERUHR</p><h1 id="tournament-title-display">Home Game</h1></div>
-          <button class="text-button" id="edit-title-button" type="button" title="Turniernamen ändern">Bearbeiten</button>
+          <div class="headline-actions">
+            <button class="text-button" id="resume-button" type="button" title="Nach einem Unterbruch mitten in einem Level weitermachen">Level &amp; Zeit setzen</button>
+            <button class="text-button" id="edit-title-button" type="button" title="Turniernamen ändern">Name ändern</button>
+          </div>
         </div>
 
         <section class="timer-panel" id="timer-panel" aria-live="polite">
@@ -53,6 +56,7 @@
             <button class="button button-primary" id="start-button" type="button"><span>▶</span> Start</button>
             <button class="button button-quiet" id="pause-button" type="button" disabled><span>Ⅱ</span> Pause</button>
             <button class="button button-quiet" id="reset-button" type="button" title="Aktuelles Level zurücksetzen" aria-label="Aktuelles Level zurücksetzen">↺</button>
+            <button class="button button-quiet lock-button" id="lock-button" type="button" aria-pressed="false" title="Sperrt Levelwechsel, Zurücksetzen und Strukturänderungen"><span>🔓</span> Sperren</button>
           </div>
           <div class="alarm-overlay" id="alarm-overlay" hidden>
             <div class="alarm-copy"><span class="alarm-icon">!</span><div><strong>Level beendet</strong><span>Alarm quittieren und nächstes Level starten</span></div></div>
@@ -136,6 +140,22 @@
         </div>
       </aside>
     </main>
+
+    <dialog class="resume-dialog" id="resume-dialog" aria-labelledby="resume-title">
+      <form method="dialog" id="resume-form">
+        <h2 id="resume-title">Level &amp; Zeit setzen</h2>
+        <p>Nach einem Unterbruch genau dort weitermachen, wo ihr wart: Level wählen, Restzeit eintragen und danach Start drücken.</p>
+        <label class="field"><span>Level</span><select id="resume-level"></select></label>
+        <div class="resume-time">
+          <label class="field"><span>Restzeit Minuten</span><input id="resume-minutes" type="number" inputmode="numeric" min="0" max="240" step="1" required></label>
+          <label class="field"><span>Sekunden</span><input id="resume-seconds" type="number" inputmode="numeric" min="0" max="59" step="1" required></label>
+        </div>
+        <div class="resume-actions">
+          <button class="small-action" type="button" id="resume-cancel">Abbrechen</button>
+          <button class="small-action resume-apply" type="submit">Übernehmen</button>
+        </div>
+      </form>
+    </dialog>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <div class="sr-only" id="live-announcement" aria-live="assertive"></div>

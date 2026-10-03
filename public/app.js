@@ -27,6 +27,7 @@ const state = {
   rebuys: 0,
   payouts: [50, 30, 20],
   alarmSound: 'soft',
+  locked: false,
   prompt: { durationHours: 4, breakEvery: 60, breakLength: 10, chips: '25, 100, 500, 1000, 5000', wishes: '' }
 };
 const DEFAULT_PROMPT = { ...state.prompt };
@@ -58,6 +59,7 @@ let alarmHandle = null;
 let currentAudioOscillators = [];
 let serverStorage = 'memory';
 let editMode = false;
+let unlockConfirmHandle = null;
 const $ = (id) => document.getElementById(id);
 const TOURNAMENT_ID = /^[A-Za-z0-9_-]{16,64}$/;
 const tournamentId = resolveTournamentId();
@@ -114,6 +116,11 @@ function bindEvents() {
   $('copy-prompt-button').addEventListener('click', copyPrompt);
   $('prompt-preview').addEventListener('focus', () => $('prompt-preview').select());
   $('test-alarm-button').addEventListener('click', testAlarm);
+  $('lock-button').addEventListener('click', handleLockClick);
+  $('resume-button').addEventListener('click', openResumeDialog);
+  $('resume-form').addEventListener('submit', applyResume);
+  $('resume-cancel').addEventListener('click', () => $('resume-dialog').close());
+  $('resume-level').addEventListener('change', () => setResumeTime(levelDuration(state.levels[Number($('resume-level').value)])));
   $('alarm-sound').addEventListener('change', (event) => {
     state.alarmSound = ALARM_SOUNDS[event.target.value] ? event.target.value : 'soft';
     saveState();
@@ -153,6 +160,7 @@ function restoreState(saved) {
   state.payouts = Array.isArray(state.payouts) && state.payouts.length === 3 ? state.payouts : [50, 30, 20];
   state.prompt = sanitizePrompt(saved.prompt);
   if (!ALARM_SOUNDS[state.alarmSound]) state.alarmSound = 'soft';
+  state.locked = state.locked === true;
   if (!['running', 'paused', 'alarm', 'finished'].includes(state.status)) state.status = 'paused';
   if (state.status === 'running') {
     state.endsAt = Number(saved.endsAt) || (Number(saved.savedAt) || Date.now()) + state.secondsLeft * 1000;
@@ -172,10 +180,99 @@ function startTimer() {
   if (state.secondsLeft <= 0) state.secondsLeft = levelDuration(state.levels[state.levelIndex]);
   state.endsAt = Date.now() + state.secondsLeft * 1000;
   state.status = 'running';
+  if (!state.locked) {
+    setLocked(true);
+    showToast('Timer gesperrt. Für Level- oder Strukturänderungen zuerst entsperren.');
+  }
   ensureAudio();
   startTicker();
   render();
   saveState();
+}
+
+// Sperre schützt ein laufendes Turnier vor versehentlichem Zurücksetzen oder Levelwechsel.
+function setLocked(locked) {
+  state.locked = locked;
+  if (locked && editMode) toggleEditMode();
+  window.clearTimeout(unlockConfirmHandle);
+  unlockConfirmHandle = null;
+}
+
+function blockedByLock() {
+  if (!state.locked) return false;
+  showToast('Timer ist gesperrt. Zum Ändern zuerst «Gesperrt» antippen und bestätigen.');
+  const button = $('lock-button');
+  button.classList.remove('is-nudged');
+  void button.offsetWidth;
+  button.classList.add('is-nudged');
+  return true;
+}
+
+function handleLockClick() {
+  if (!state.locked) {
+    setLocked(true);
+    showToast('Timer gesperrt.');
+  } else if (!unlockConfirmHandle) {
+    // Zweistufig entsperren, damit ein einzelner Fehlklick nichts auslöst.
+    unlockConfirmHandle = window.setTimeout(() => { unlockConfirmHandle = null; renderLock(); }, 4000);
+    renderLock();
+    return;
+  } else {
+    setLocked(false);
+    showToast('Entsperrt. Level und Struktur können geändert werden.');
+  }
+  render();
+  saveState();
+}
+
+function renderLock() {
+  const button = $('lock-button');
+  button.classList.toggle('is-locked', state.locked);
+  button.classList.toggle('is-confirming', Boolean(unlockConfirmHandle));
+  button.setAttribute('aria-pressed', String(state.locked));
+  button.innerHTML = !state.locked ? '<span>🔓</span> Sperren' : unlockConfirmHandle ? 'Wirklich entsperren?' : '<span>🔒</span> Gesperrt';
+  document.body.classList.toggle('is-locked', state.locked);
+}
+
+function openResumeDialog() {
+  if (blockedByLock()) return;
+  $('resume-level').innerHTML = state.levels.map((level, index) => {
+    const label = level.type === 'break'
+      ? `Pause (${level.durationMinutes} Min.)`
+      : `Level ${levelNumber(index)}: ${formatNumber(level.smallBlind)} / ${formatNumber(level.bigBlind)}${level.ante ? `, Ante ${formatNumber(level.ante)}` : ''} (${level.durationMinutes} Min.)`;
+    return `<option value="${index}"${index === state.levelIndex ? ' selected' : ''}>${label}</option>`;
+  }).join('');
+  setResumeTime(remainingSeconds());
+  $('resume-dialog').showModal();
+  $('resume-minutes').select();
+}
+
+function setResumeTime(seconds) {
+  $('resume-minutes').value = Math.floor(seconds / 60);
+  $('resume-seconds').value = seconds % 60;
+}
+
+function applyResume(event) {
+  event.preventDefault();
+  const index = Number($('resume-level').value);
+  const seconds = clamp(Math.floor(Number($('resume-minutes').value) || 0), 0, 240) * 60
+    + clamp(Math.floor(Number($('resume-seconds').value) || 0), 0, 59);
+  if (!state.levels[index]) return;
+  if (seconds < 1) return showToast('Restzeit muss mindestens 1 Sekunde sein.');
+  stopTicker();
+  stopAlarm();
+  state.levelIndex = index;
+  state.secondsLeft = seconds;
+  state.endsAt = null;
+  state.status = 'paused';
+  $('resume-dialog').close();
+  render();
+  saveState();
+  showToast(`Bereit: ${state.levels[index].type === 'break' ? 'Pause' : `Level ${levelNumber(index)}`} mit ${formatClock(seconds)}. Start drücken.`);
+}
+
+function formatClock(seconds) {
+  return `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
 }
 
 function pauseTimer() {
@@ -189,6 +286,7 @@ function pauseTimer() {
 }
 
 function resetLevel() {
+  if (blockedByLock()) return;
   stopAlarm();
   stopTicker();
   state.status = 'paused';
@@ -248,6 +346,7 @@ function acknowledgeAlarm() {
 }
 
 function moveLevel(offset) {
+  if (blockedByLock()) return;
   stopAlarm();
   stopTicker();
   state.levelIndex = clamp(state.levelIndex + offset, 0, state.levels.length - 1);
@@ -322,6 +421,7 @@ function render() {
   updatePayouts();
   syncPromptInputs();
   $('alarm-sound').value = state.alarmSound;
+  renderLock();
 }
 
 function renderTimer() {
@@ -395,6 +495,7 @@ function syncControls() {
 }
 
 function handleLevelClick(event) {
+  if (event.target.closest('[data-index]') && blockedByLock()) return;
   const deleteButton = event.target.closest('[data-delete]');
   if (deleteButton) {
     event.stopPropagation();
@@ -434,10 +535,12 @@ function handleLevelKey(event) {
   const row = event.target.closest('[data-index]');
   if (!row) return;
   event.preventDefault();
+  if (blockedByLock()) return;
   moveToLevel(Number(row.dataset.index));
 }
 
 function toggleEditMode() {
+  if (!editMode && blockedByLock()) return;
   editMode = !editMode;
   $('edit-levels-button').setAttribute('aria-pressed', String(editMode));
   $('edit-levels-button').innerHTML = editMode ? '<span>✓</span> Fertig' : '<span>✎</span> Bearbeiten';
@@ -597,6 +700,7 @@ function applyJsonEditor() {
 }
 
 function applyStructure(data) {
+  if (state.locked) throw new Error('Timer ist gesperrt. Zum Ersetzen der Struktur zuerst entsperren.');
   const normalized = Array.isArray(data) ? { levels: data } : data;
   if (!isValidStructure(normalized)) {
     throw new Error('Ungültig: levels mit 1–100 Leveln/Pausen, Blinds und Dauer prüfen.');
