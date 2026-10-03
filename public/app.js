@@ -25,7 +25,16 @@ const state = {
   buyIn: 20,
   eliminated: 0,
   rebuys: 0,
-  payouts: [50, 30, 20]
+  payouts: [50, 30, 20],
+  prompt: { durationHours: 4, breakEvery: 60, breakLength: 10, chips: '25, 100, 500, 1000, 5000', wishes: '' }
+};
+const DEFAULT_PROMPT = { ...state.prompt };
+const PROMPT_FIELDS = {
+  'prompt-duration': 'durationHours',
+  'prompt-break-every': 'breakEvery',
+  'prompt-break-length': 'breakLength',
+  'prompt-chips': 'chips',
+  'ai-prompt': 'wishes'
 };
 
 let tickHandle = null;
@@ -90,6 +99,12 @@ function bindEvents() {
   $('json-toggle').addEventListener('click', toggleJsonEditor);
   $('settings-toggle').addEventListener('click', toggleSettings);
   $('copy-prompt-button').addEventListener('click', copyPrompt);
+  $('prompt-preview').addEventListener('focus', () => $('prompt-preview').select());
+  $('test-alarm-button').addEventListener('click', testAlarm);
+  for (const id of Object.keys(PROMPT_FIELDS)) {
+    $(id).addEventListener('input', updatePromptFromInputs);
+    $(id).addEventListener('change', () => { syncPromptInputs(); saveState(); });
+  }
   $('apply-answer-button').addEventListener('click', applyAnswer);
   $('fullscreen-button').addEventListener('click', toggleFullscreen);
   $('edit-title-button').addEventListener('click', editTitle);
@@ -116,6 +131,7 @@ function restoreState(saved) {
   state.eliminated = clamp(Math.floor(Number(state.eliminated) || 0), 0, state.entries - 1);
   state.rebuys = Math.max(0, Math.floor(Number(state.rebuys) || 0));
   state.payouts = Array.isArray(state.payouts) && state.payouts.length === 3 ? state.payouts : [50, 30, 20];
+  state.prompt = sanitizePrompt(saved.prompt);
   if (!['running', 'paused', 'alarm', 'finished'].includes(state.status)) state.status = 'paused';
   if (state.status === 'running') {
     state.endsAt = Number(saved.endsAt) || (Number(saved.savedAt) || Date.now()) + state.secondsLeft * 1000;
@@ -276,6 +292,7 @@ function render() {
   $('payout-second').value = state.payouts[1];
   $('payout-third').value = state.payouts[2];
   updatePayouts();
+  syncPromptInputs();
 }
 
 function renderTimer() {
@@ -466,18 +483,56 @@ function updateSettingsFromInputs() {
   $('starting-stack').value = state.startingStack;
   $('buy-in').value = state.buyIn;
   renderStats();
+  renderPromptPreview();
   saveState();
 }
 
 function updatePayouts() {
-  if (!$('payout-total')) return;
   const total = state.payouts.reduce((sum, share) => sum + Number(share || 0), 0);
-  $('payout-total').textContent = `${total}%`;
+  $('payout-total').textContent = total === 100 ? 'Total 100%' : `Total ${total}% (soll 100%)`;
   $('payout-total').classList.toggle('invalid', total !== 100);
-  $('payout-results').innerHTML = state.payouts.map((share, index) => {
-    const amount = Math.round(state.entries * state.buyIn * Number(share || 0)) / 100;
-    return `<span>${index + 1}. ${formatCurrency(amount)}</span>`;
-  }).join('');
+  state.payouts.forEach((share, index) => {
+    $(`payout-amount-${index}`).textContent = formatCurrency(state.entries * state.buyIn * Number(share || 0) / 100);
+  });
+}
+
+function sanitizePrompt(saved) {
+  const prompt = { ...DEFAULT_PROMPT, ...(saved && typeof saved === 'object' ? saved : {}) };
+  return {
+    durationHours: clamp(Number(prompt.durationHours) || DEFAULT_PROMPT.durationHours, 0.5, 24),
+    breakEvery: clamp(Math.floor(Number(prompt.breakEvery) || 0), 0, 600),
+    breakLength: clamp(Math.floor(Number(prompt.breakLength) || DEFAULT_PROMPT.breakLength), 1, 120),
+    chips: String(prompt.chips ?? '').slice(0, 200),
+    wishes: String(prompt.wishes ?? '').slice(0, 1000)
+  };
+}
+
+function updatePromptFromInputs(event) {
+  state.prompt[PROMPT_FIELDS[event.target.id]] = event.target.value;
+  renderPromptPreview();
+  saveState();
+}
+
+function syncPromptInputs() {
+  state.prompt = sanitizePrompt(state.prompt);
+  for (const [id, key] of Object.entries(PROMPT_FIELDS)) {
+    if (document.activeElement !== $(id)) $(id).value = state.prompt[key];
+  }
+  renderPromptPreview();
+}
+
+function renderPromptPreview() {
+  $('prompt-preview').value = buildPrompt();
+}
+
+function testAlarm() {
+  if (state.status === 'alarm') return;
+  ensureAudio();
+  if (!audioContext) return showToast('Dieser Browser unterstützt keine Tonausgabe.');
+  playAlarmTone();
+  window.setTimeout(playAlarmTone, 1400);
+  window.setTimeout(playAlarmTone, 2800);
+  showToast('Alarmton wird abgespielt. Lautstärke prüfen.');
 }
 
 async function importFile(event) {
@@ -543,16 +598,24 @@ function isValidStructure(data) {
 }
 
 function buildPrompt() {
-  const wishes = $('ai-prompt').value.trim()
-    || 'Keine besonderen Vorgaben. Erstelle eine ausgewogene Struktur für ein Home Game von etwa 4 Stunden.';
+  const prompt = sanitizePrompt(state.prompt);
+  const chips = prompt.chips.split(/[^\d]+/).filter(Boolean).map(Number).filter((value) => value > 0);
+  const hours = String(prompt.durationHours).replace('.', ',');
+  const breaks = prompt.breakEvery > 0
+    ? `etwa alle ${prompt.breakEvery} Minuten Spielzeit eine Pause von ${prompt.breakLength} Minuten`
+    : 'keine Pausen';
   return `Erstelle eine Blindstruktur für ein No-Limit-Hold'em-Pokerturnier.
 
 Turnierdaten:
 - Spieler: ${state.initialPlayers}
-- Startstack: ${state.startingStack} Chips pro Spieler
-
-Vorgaben:
-${wishes}
+- Startstack: ${state.startingStack} Chips pro Spieler (insgesamt ${state.initialPlayers * state.startingStack} Chips im Spiel)
+- Geplante Spieldauer: etwa ${hours} Stunden bis zum Sieger
+- Verfügbare Chipwerte: ${chips.length ? chips.join(', ') : 'beliebig'}
+- Pausen: ${breaks}
+${prompt.wishes.trim() ? `- Weitere Wünsche: ${prompt.wishes.trim()}\n` : ''}
+Anforderungen:
+- Levellängen und Blindsteigerung so wählen, dass das Turnier ungefähr in der geplanten Spieldauer entschieden ist. Danach noch 2–3 weitere Level anhängen, falls es länger dauert.
+${chips.length ? `- Alle Blinds und Antes müssen mit den verfügbaren Chipwerten bezahlbar sein, also Vielfache von ${Math.min(...chips)}. Steigen die Blinds, darf der kleinste Chip später wegfallen (Color-up); dann sind die Werte Vielfache des nächstgrösseren Chips.\n` : ''}- Pausen sind eigene Einträge an den passenden Stellen.
 
 Antworte ausschliesslich mit JSON in genau diesem Format, ohne weiteren Text:
 {"levels":[{"smallBlind":25,"bigBlind":50,"ante":0,"durationMinutes":20,"type":"level"},{"smallBlind":0,"bigBlind":0,"ante":0,"durationMinutes":10,"type":"break"}]}

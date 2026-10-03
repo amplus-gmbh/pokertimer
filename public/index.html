@@ -75,8 +75,13 @@
               <div class="player-count"><span>Ausgeschieden</span><strong id="eliminated-count">0</strong></div>
               <div class="action-pair"><button class="small-action" id="eliminate-button" type="button">− Bust</button><button class="small-action" id="rebuy-button" type="button">+ Rebuy</button></div>
             </div>
-            <div class="payout-row"><span>Auszahlung</span><div class="payout-inputs"><label><input id="payout-first" type="number" min="0" max="100" value="50"><span>1.</span></label><label><input id="payout-second" type="number" min="0" max="100" value="30"><span>2.</span></label><label><input id="payout-third" type="number" min="0" max="100" value="20"><span>3.</span></label></div><span class="payout-total" id="payout-total">100%</span></div>
-            <div class="payout-results" id="payout-results"></div>
+            <div class="payout-heading"><span>Auszahlung</span><span class="payout-total" id="payout-total">100%</span></div>
+            <div class="payout-grid">
+              <div class="payout-place"><label for="payout-first">1. Platz</label><span class="payout-input"><input id="payout-first" type="number" min="0" max="100" value="50"><span>%</span></span><strong class="payout-amount" id="payout-amount-0">CHF 0</strong></div>
+              <div class="payout-place"><label for="payout-second">2. Platz</label><span class="payout-input"><input id="payout-second" type="number" min="0" max="100" value="30"><span>%</span></span><strong class="payout-amount" id="payout-amount-1">CHF 0</strong></div>
+              <div class="payout-place"><label for="payout-third">3. Platz</label><span class="payout-input"><input id="payout-third" type="number" min="0" max="100" value="20"><span>%</span></span><strong class="payout-amount" id="payout-amount-2">CHF 0</strong></div>
+            </div>
+            <div class="settings-footer"><button class="text-button" id="test-alarm-button" type="button" title="Spielt den Alarmton kurz ab">🔔 Alarm testen</button></div>
           </div>
         </section>
       </section>
@@ -95,13 +100,21 @@
         </div>
         <div class="ai-box">
           <div class="ai-header"><span class="ai-spark">✳</span><div><strong>Struktur mit KI-Chat</strong><span>Prompt kopieren, in ChatGPT, Claude o. Ä. einfügen, Antwort hier einfügen</span></div></div>
-          <label class="ai-step" for="ai-prompt">1. Vorgaben</label>
-          <textarea id="ai-prompt" rows="2" placeholder="z. B. ca. 4 Stunden, 20-Minuten-Level, Start 25/50, nach 2 Stunden 10 Minuten Pause"></textarea>
-          <button class="ai-button" id="copy-prompt-button" type="button"><span>⧉</span> 2. Prompt kopieren</button>
+          <p class="ai-step">1. Vorgaben</p>
+          <div class="prompt-grid">
+            <label class="field"><span>Spieldauer (Std.)</span><input id="prompt-duration" type="number" min="0.5" max="24" step="0.5" value="4"></label>
+            <label class="field"><span>Pause alle (Min.)</span><input id="prompt-break-every" type="number" min="0" max="600" step="5" value="60" title="0 = keine Pausen"></label>
+            <label class="field"><span>Pausenlänge (Min.)</span><input id="prompt-break-length" type="number" min="1" max="120" step="1" value="10"></label>
+            <label class="field field-wide"><span>Verfügbare Chipwerte</span><input id="prompt-chips" type="text" value="25, 100, 500, 1000, 5000" placeholder="z. B. 25, 100, 500, 1000, 5000"></label>
+            <label class="field field-wide"><span>Weitere Wünsche (optional)</span><textarea id="ai-prompt" rows="2" placeholder="z. B. 20-Minuten-Level, ohne Ante, Start 25/50"></textarea></label>
+          </div>
+          <label class="ai-step" for="prompt-preview">2. Prompt kopieren und im KI-Chat einfügen</label>
+          <textarea id="prompt-preview" rows="6" readonly spellcheck="false"></textarea>
+          <button class="ai-button" id="copy-prompt-button" type="button"><span>⧉</span> Prompt kopieren</button>
           <label class="ai-step" for="ai-answer">3. Antwort der KI einfügen</label>
           <textarea id="ai-answer" rows="2" spellcheck="false" placeholder="Antwort mit JSON hier einfügen"></textarea>
           <button class="ai-button" id="apply-answer-button" type="button"><span>✓</span> Struktur übernehmen</button>
-          <p class="ai-note">Spieler und Startstack aus „Spieler &amp; Preisgeld“ werden automatisch in den Prompt übernommen.</p>
+          <p class="ai-note">Spieler und Startstack aus „Spieler &amp; Preisgeld“ fliessen automatisch in den Prompt ein.</p>
         </div>
         <div class="levels-list" id="levels-list" aria-label="Blindlevel"></div>
         <div class="structure-footer"><span id="level-count">12 LEVELS</span><span id="total-duration">GESAMT 4H 00M</span></div>
